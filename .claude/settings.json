@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "impeccable@impeccable": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\\.mdx'; then npx astro build 2>&1 | tail -3; fi"
+      }
+    ]
+  }
+}
