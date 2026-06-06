@@ -14,6 +14,11 @@ npm run build    # 构建静态站点到 dist/
 npm run preview  # 预览构建结果
 ```
 
+## 部署
+
+GitHub Pages，base path `/aiDeepResearch/`。push 到 main 自动部署。
+站点地址：https://snowzhaozhj.github.io/aiDeepResearch/
+
 ## 目录结构
 
 ```
@@ -65,6 +70,7 @@ confidence: "high"            # high | medium | low
 
 ## 工作方式
 
+- `@components/*` 路径别名已配置（tsconfig.json），MDX 中可直接 import
 - 新增研究时在 `src/content/research/<topic>/` 下创建 `index.mdx`
 - 优先用 `.mdx` 以利用组件增强视觉；纯文本内容可用 `.md`
 - 在 MDX 中通过 `import X from '@components/X.astro'` 导入组件
@@ -72,3 +78,10 @@ confidence: "high"            # high | medium | low
 - 所有提到的外部项目/工具必须附带链接（GitHub/官网/论文）
 - 新增研究前先检查仓库中是否已有相关内容
 - 引用外部资源时标注来源和日期
+
+## 注意事项
+
+- MDX 中用 `{/* 注释 */}` 而非 `<!-- -->`，HTML 注释会报错
+- MDX 中自闭合标签必须写 `<br />`，不能 `<br>`
+- `oklch(from var(...) l c h / alpha)` 需要 Chrome 119+/Safari 16.4+/Firefox 128+
+- Astro scoped styles 中引用组件内部元素需用 `:global()` 选择器
