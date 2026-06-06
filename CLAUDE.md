@@ -73,9 +73,10 @@ confidence: "high"
 
 ## 设计系统
 
-- 暗色主题（深暖黑底 oklch 0.13），玫瑰红主色（oklch hue 357°, 高明度发光感）
+- 双主题（亮色默认 + 暗色可切换），玫瑰红主色（oklch hue 357°）
 - 去掉侧边栏，采用极简顶部导航 + 全宽内容区布局
-- 设计 token 定义在 `src/styles/global.css` 的 `:root`
+- 亮色 token 在 `:root`，暗色在 `[data-theme="dark"]`
+- 切换按钮在 topbar 右侧，通过 localStorage 持久化
 - 详细设计规范见 `DESIGN.md` 和 `PRODUCT.md`
 
 ## 工作方式

@@ -21,6 +21,12 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script is:inline>
+      (function() {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      })();
+    </script>
   </head>
   <body>
     <div class="shell">
@@ -35,13 +41,32 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
           <span class="brand-text">Deep Research</span>
         </a>
 
-        <nav class="nav">
-          {sorted.slice(0, 5).map((item) => (
-            <a class="nav-link" href={`${base}research/${item.id}/`}>
-              {item.data.title.length > 14 ? item.data.title.slice(0, 14) + '…' : item.data.title}
-            </a>
-          ))}
-        </nav>
+        <div class="topbar-right">
+          <nav class="nav">
+            {sorted.slice(0, 5).map((item) => (
+              <a class="nav-link" href={`${base}research/${item.id}/`}>
+                {item.data.title.length > 14 ? item.data.title.slice(0, 14) + '…' : item.data.title}
+              </a>
+            ))}
+          </nav>
+
+          <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">
+            <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
       </header>
 
       <main class="main">
@@ -52,6 +77,22 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
         <span class="footer-text">有观点的技术研究，每个结论标注置信度</span>
       </footer>
     </div>
+
+    <script is:inline>
+      (function() {
+        var btn = document.getElementById('theme-toggle');
+        btn.addEventListener('click', function() {
+          var isDark = document.documentElement.hasAttribute('data-theme');
+          if (isDark) {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('theme', 'light');
+          } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+          }
+        });
+      })();
+    </script>
 
     <style>
       .shell {
@@ -71,7 +112,7 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
         position: sticky;
         top: 0;
         z-index: 100;
-        backdrop-filter: blur(12px);
+        transition: background 300ms var(--ease), border-color 300ms var(--ease);
       }
 
       .brand {
@@ -95,6 +136,12 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
         letter-spacing: -0.02em;
       }
 
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
       .nav {
         display: flex;
         gap: 0.2rem;
@@ -113,6 +160,30 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
         background: var(--surface);
       }
 
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border-dim);
+        background: var(--surface);
+        color: var(--ink-2);
+        cursor: pointer;
+        transition: all 150ms var(--ease);
+        margin-left: 0.5rem;
+      }
+      .theme-toggle:hover {
+        color: var(--ink);
+        border-color: var(--border);
+        background: var(--surface-2);
+      }
+
+      .icon-moon { display: none; }
+      :global([data-theme="dark"]) .icon-sun { display: none; }
+      :global([data-theme="dark"]) .icon-moon { display: block; }
+
       .main {
         flex: 1;
         padding: 3.5rem 2rem 5rem;
@@ -125,6 +196,7 @@ const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTi
         border-top: 1px solid var(--border-dim);
         padding: 1.5rem 2rem;
         text-align: center;
+        transition: border-color 300ms var(--ease);
       }
       .footer-text {
         font-size: 0.8125rem;

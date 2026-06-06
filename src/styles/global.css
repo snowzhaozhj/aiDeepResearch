@@ -7,7 +7,46 @@
   }
 }
 
+/* ── Light theme (default) ── */
 :root {
+  --bg: oklch(1 0 0);
+  --surface: oklch(0.97 0.003 265);
+  --surface-2: oklch(0.94 0.005 265);
+  --border: oklch(0.88 0.008 265);
+  --border-dim: oklch(0.92 0.005 265);
+
+  --ink: oklch(0.14 0.01 265);
+  --ink-2: oklch(0.32 0.01 265);
+  --muted: oklch(0.50 0.008 265);
+
+  --primary: oklch(0.52 0.19 357);
+  --primary-dim: oklch(0.52 0.19 357 / 0.09);
+  --primary-bg: oklch(0.97 0.02 357);
+  --primary-glow: oklch(0.52 0.19 357 / 0.2);
+
+  --accent: oklch(0.42 0.12 230);
+  --accent-dim: oklch(0.42 0.12 230 / 0.08);
+
+  --green: oklch(0.45 0.15 155);
+  --green-dim: oklch(0.45 0.15 155 / 0.1);
+  --orange: oklch(0.55 0.14 55);
+  --orange-dim: oklch(0.55 0.14 55 / 0.1);
+  --red: oklch(0.50 0.17 25);
+  --red-dim: oklch(0.50 0.17 25 / 0.09);
+  --purple: oklch(0.48 0.16 300);
+  --purple-dim: oklch(0.48 0.16 300 / 0.09);
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --r: 8px;
+  --r-lg: 12px;
+
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    "Noto Sans SC", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
   --bg: oklch(0.13 0.015 350);
   --surface: oklch(0.17 0.012 350);
   --surface-2: oklch(0.21 0.010 350);
@@ -34,14 +73,6 @@
   --red-dim: oklch(0.68 0.17 25 / 0.10);
   --purple: oklch(0.70 0.15 300);
   --purple-dim: oklch(0.70 0.15 300 / 0.10);
-
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --r: 8px;
-  --r-lg: 12px;
-
-  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
-    "Noto Sans SC", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 * {
@@ -62,6 +93,7 @@ body {
   line-height: 1.8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 300ms var(--ease), color 300ms var(--ease);
 }
 
 a {
@@ -70,6 +102,9 @@ a {
   transition: color 150ms var(--ease);
 }
 a:hover {
+  color: oklch(0.62 0.20 357);
+}
+[data-theme="dark"] a:hover {
   color: oklch(0.78 0.20 357);
 }
 
@@ -219,7 +254,7 @@ a:hover {
 .prose a {
   color: var(--primary);
   text-decoration: underline;
-  text-decoration-color: oklch(0.68 0.22 357 / 0.3);
+  text-decoration-color: oklch(from var(--primary) l c h / 0.3);
   text-underline-offset: 3px;
   transition: text-decoration-color 150ms var(--ease);
 }
@@ -271,7 +306,7 @@ a:hover {
 /* ── Callouts ── */
 .insight {
   background: var(--primary-bg);
-  border: 1px solid oklch(0.68 0.22 357 / 0.2);
+  border: 1px solid oklch(from var(--primary) l c h / 0.2);
   border-radius: var(--r-lg);
   padding: 1.2rem 1.4rem;
   margin: 1.8rem 0;
@@ -294,8 +329,8 @@ a:hover {
 }
 
 .tip {
-  background: oklch(0.72 0.16 155 / 0.06);
-  border: 1px solid oklch(0.72 0.16 155 / 0.15);
+  background: var(--green-dim);
+  border: 1px solid oklch(from var(--green) l c h / 0.2);
   border-radius: var(--r-lg);
   padding: 1.2rem 1.4rem;
   margin: 1.8rem 0;
