@@ -16,6 +16,8 @@ const { Content } = await render(item);
 ---
 
 <Base title={`${item.data.title} — AI Deep Research`}>
+  <div class="reading-progress" id="reading-progress"></div>
+
   <nav class="breadcrumb">
     <a href={base}>研究</a>
     <span class="sep">/</span>
@@ -59,12 +61,87 @@ const { Content } = await render(item);
     </div>
   </header>
 
-  <article class="prose">
-    <Content />
-  </article>
+  <div class="article-layout">
+    <article class="prose" id="article-content">
+      <Content />
+    </article>
+
+    <aside class="toc" id="toc">
+      <div class="toc-inner">
+        <span class="toc-title">目录</span>
+        <nav class="toc-nav" id="toc-nav"></nav>
+      </div>
+    </aside>
+  </div>
+
+  <script is:inline>
+    (function() {
+      var content = document.getElementById('article-content');
+      var tocNav = document.getElementById('toc-nav');
+      var progressBar = document.getElementById('reading-progress');
+      if (!content || !tocNav) return;
+
+      var headings = content.querySelectorAll('h2, h3');
+      if (headings.length === 0) return;
+
+      // Generate IDs and TOC links
+      var fragment = document.createDocumentFragment();
+      headings.forEach(function(h, i) {
+        if (!h.id) {
+          h.id = 'heading-' + i;
+        }
+        var link = document.createElement('a');
+        link.href = '#' + h.id;
+        link.textContent = h.textContent;
+        link.className = 'toc-link toc-' + h.tagName.toLowerCase();
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          history.replaceState(null, '', '#' + h.id);
+        });
+        fragment.appendChild(link);
+      });
+      tocNav.appendChild(fragment);
+
+      // IntersectionObserver for active heading
+      var links = tocNav.querySelectorAll('.toc-link');
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            links.forEach(function(l) { l.classList.remove('active'); });
+            var active = tocNav.querySelector('a[href="#' + entry.target.id + '"]');
+            if (active) active.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+
+      headings.forEach(function(h) { observer.observe(h); });
+
+      // Reading progress bar
+      if (progressBar) {
+        window.addEventListener('scroll', function() {
+          var scrollTop = window.scrollY;
+          var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+          progressBar.style.width = progress + '%';
+        }, { passive: true });
+      }
+    })();
+  </script>
 </Base>
 
 <style>
+  .reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: var(--primary);
+    z-index: 200;
+    transition: width 50ms linear;
+  }
+
   .breadcrumb {
     display: flex;
     align-items: center;
@@ -81,7 +158,7 @@ const { Content } = await render(item);
   .current { color: var(--ink-2); }
 
   .article-header {
-    margin-bottom: 3.5rem;
+    margin-bottom: 3rem;
     padding-bottom: 2rem;
     border-bottom: 1px solid var(--border);
   }
@@ -107,11 +184,11 @@ const { Content } = await render(item);
     border-radius: 50%;
   }
   .ci-high { color: var(--green); }
-  .ci-high .ci-dot { background: var(--green); box-shadow: 0 0 10px oklch(0.72 0.16 155 / 0.4); }
+  .ci-high .ci-dot { background: var(--green); box-shadow: 0 0 10px var(--green-dim); }
   .ci-medium { color: var(--orange); }
-  .ci-medium .ci-dot { background: var(--orange); box-shadow: 0 0 10px oklch(0.74 0.14 65 / 0.4); }
+  .ci-medium .ci-dot { background: var(--orange); box-shadow: 0 0 10px var(--orange-dim); }
   .ci-low { color: var(--red); }
-  .ci-low .ci-dot { background: var(--red); box-shadow: 0 0 10px oklch(0.68 0.17 25 / 0.4); }
+  .ci-low .ci-dot { background: var(--red); box-shadow: 0 0 10px var(--red-dim); }
 
   .header-date {
     font-size: 0.8125rem;
@@ -179,6 +256,73 @@ const { Content } = await render(item);
     border-radius: 4px;
     background: var(--primary-dim);
     color: var(--primary);
+  }
+
+  /* ── Article layout with TOC ── */
+  .article-layout {
+    position: relative;
+  }
+
+  .toc {
+    position: fixed;
+    top: 80px;
+    right: max(1rem, calc((100vw - 900px) / 2 - 240px));
+    width: 200px;
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .toc-inner {
+    padding: 0.8rem 0;
+  }
+
+  .toc-title {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+    padding-left: 0.75rem;
+  }
+
+  .toc-nav {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .toc-nav :global(.toc-link) {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 0.25rem 0.75rem;
+    border-left: 2px solid transparent;
+    transition: all 150ms var(--ease);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .toc-nav :global(.toc-link:hover) {
+    color: var(--ink-2);
+  }
+
+  .toc-nav :global(.toc-link.active) {
+    color: var(--primary);
+    border-left-color: var(--primary);
+  }
+
+  .toc-nav :global(.toc-h3) {
+    padding-left: 1.4rem;
+    font-size: 0.6875rem;
+  }
+
+  /* Hide TOC on narrow viewports */
+  @media (max-width: 1280px) {
+    .toc { display: none; }
   }
 
   @media (max-width: 768px) {
