@@ -1,0 +1,375 @@
+---
+title: "Spec-Driven AI 开发框架深度研究"
+date: 2026-06-06
+summary: "系统性分析 7 个规范驱动的 AI 开发框架（OpenSpec、Spec Kit、Spec Kitty、GSD、Compound Engineering、Superpowers、BMAD），覆盖实现机制、知识积累循环、选型决策。经 21 个子代理对抗验证。"
+tags: ["Spec-Driven", "AI开发框架", "知识积累", "工作流", "规范工程"]
+method: "8 维度并行研究、12 条声明对抗验证（7 通过，5 驳回）、跨框架综合分析"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import Timeline from '@components/Timeline.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  8 个研究目标并行深挖（含学术论文 arxiv 2606.04967），12 条关键声明三票制对抗验证（7 通过，5 驳回），跨框架知识积累模式综合分析。21 个子代理，120 万 token。
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  Spec-driven 开发已成为 AI 编程的主流范式，7 个主要框架在不到一年内累计 500K+ GitHub stars。但没有任何一个框架经过独立的经验性评估——整个领域建立在理论论证和用户证言之上，而非受控实验。
+</KeyFinding>
+
+<KeyFinding level="high">
+  知识积累能力是框架间最大的分化点。Compound Engineering 的"解决方案文档化→检索→计划"闭环和 Spec Kitty 的"回顾→治理变更提案"机制是目前仅有的两个真正的正反馈循环。其余框架的知识积累更多是被动的文件堆积。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  流行度与流程完备性正交。Spec-Flow（85 stars）在学术评估中得分 11/12，远超 GSD（64K stars，4/12）和 Spec Kit（109K stars，8/12）。开发者的选择被营销、生态整合和上手摩擦驱动，而非流程质量。
+</KeyFinding>
+
+---
+
+## 一、七大框架全景
+
+<ComparisonMatrix
+  headers={["框架", "Stars", "核心定位", "知识积累机制"]}
+  rows={[
+    { "框架": "[Superpowers](https://github.com/obra/superpowers)", "Stars": "219K", "核心定位": "7 阶段全流程工作流 + TDD 强制", "知识积累机制": "行为约束迭代（TDD on Prompts）" },
+    { "框架": "[Spec Kit](https://github.com/github/spec-kit)", "Stars": "109K", "核心定位": "GitHub 官方规范驱动开发", "知识积累机制": "Constitution 治理 + 跨项目预设" },
+    { "框架": "[GSD](https://github.com/open-gsd/gsd-core)", "Stars": "64K", "核心定位": "上下文工程 + 新鲜上下文子代理", "知识积累机制": "全局学习库（默认关闭）" },
+    { "框架": "[OpenSpec](https://github.com/Fission-AI/OpenSpec)", "Stars": "53K", "核心定位": "轻量级 delta 规范管理", "知识积累机制": "Delta 归档累积（被动）" },
+    { "框架": "[BMAD](https://github.com/bmad-code-org/BMAD-METHOD)", "Stars": "49K", "核心定位": "角色分离 + 微文件架构", "知识积累机制": "project-context 自动更新（项目内）" },
+    { "框架": "[Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)", "Stars": "20K", "核心定位": "知识复利 + 多代理编排", "知识积累机制": "解决方案文档化闭环（最强）" },
+    { "框架": "[Spec Kitty](https://github.com/Priivacy-ai/spec-kitty)", "Stars": "1.3K", "核心定位": "最深执行隔离 + 治理回顾", "知识积累机制": "回顾→治理变更提案（最严谨）" },
+  ]}
+/>
+
+---
+
+## 二、各框架深度分析
+
+### 2.1 Superpowers — 最大社区，LLM 行为工程先锋
+
+- **仓库**：[obra/superpowers](https://github.com/obra/superpowers) | **219K stars** | MIT
+- **作者**：Jesse Vincent（Anthropic 工程师）
+- **架构**：纯 Markdown，零运行时依赖，通过 LLM 上下文注入生效
+- **核心创新**：**反合理化工程**——每个技能都包含"合理化借口表"，预见并堵住 LLM 的 12 种逃避策略
+
+**七阶段工作流**：Brainstorm → Git Worktree → Plan → SDD（子代理驱动开发）→ TDD → Code Review → Finish
+
+<ScoreCard
+  title="Superpowers 维度评估"
+  scores={[
+    { label: "LLM 行为控制", value: 10, max: 10 },
+    { label: "TDD 强制执行", value: 9, max: 10 },
+    { label: "工具兼容性", value: 8, max: 10 },
+    { label: "知识积累", value: 3, max: 10 },
+    { label: "小任务友好度", value: 2, max: 10 },
+    { label: "Token 效率", value: 3, max: 10 },
+  ]}
+/>
+
+<Callout type="insight" title="非显而易见的洞察">
+  CSO（Claude Search Optimization）是一个隐藏的关键创新：技能的 description 字段被刻意设计为只描述触发条件而不描述工作流。实测发现当 description 概括了流程时，LLM 直接按 description 做了就跳过了完整流程。这本质上是对 LLM"偷懒"行为的逆向工程。
+</Callout>
+
+### 2.2 GitHub Spec Kit — 官方背景，模板即约束
+
+- **仓库**：[github/spec-kit](https://github.com/github/spec-kit) | **109K stars** | MIT
+- **架构**：注册表模式支持 30+ AI 代理集成，command 模板本质是结构化超级提示词
+- **核心创新**：**Constitution 机制**——版本化的治理文档，带 Sync Impact Report 追踪修改影响
+
+**工作流**：Constitution → Specify → Clarify → Plan → Analyze → Tasks → Implement → Checklist → Tasks-to-Issues
+
+<ScoreCard
+  title="Spec Kit 维度评估（学术论文数据）"
+  scores={[
+    { label: "规范化", value: 2, max: 2 },
+    { label: "上下文管理", value: 2, max: 2 },
+    { label: "角色分离", value: 1, max: 2 },
+    { label: "执行能力", value: 1, max: 2 },
+    { label: "验证机制", value: 1, max: 2 },
+    { label: "可移植性", value: 2, max: 2 },
+  ]}
+/>
+
+<Callout type="warning">
+  Spec Kit 的本质不是代码生成工具而是"LLM 行为约束框架"——200+ 行的结构化提示词模板系统性约束 LLM 的行为偏差（过早讨论实现细节、过度工程化、忽略边界条件）。但完全依赖 LLM 正确执行指令，没有程序化强制。
+</Callout>
+
+### 2.3 GSD (Get Shit Done) — 上下文工程专家
+
+- **仓库**：[open-gsd/gsd-core](https://github.com/open-gsd/gsd-core) | **64K stars** | MIT
+- **架构**：文件驱动状态机，.planning/ 目录存储所有状态，纯 Markdown/JSON
+- **核心创新**：**上下文工程**——将"agent 应该读什么、按什么顺序、在什么框架下"作为一等工程学科
+
+**工作流**：Discuss → UI Design → Plan（研究→计划→计划审查）→ Execute（并行波次）→ Verify → Ship
+
+<ScoreCard
+  title="GSD 维度评估（学术论文数据）"
+  scores={[
+    { label: "规范化", value: 1, max: 2 },
+    { label: "上下文管理", value: 2, max: 2 },
+    { label: "角色分离", value: 0, max: 2 },
+    { label: "执行能力", value: 1, max: 2 },
+    { label: "验证机制", value: 0, max: 2 },
+    { label: "可移植性", value: 1, max: 2 },
+  ]}
+/>
+
+<Callout type="insight">
+  GSD 的真正创新不是 spec-driven 开发，而是将上下文组装作为显式工程学科。新鲜上下文子代理（每个只加载 200K token 的精选上下文）是对 transformer 注意力在长序列上退化的结构性回应。
+</Callout>
+
+### 2.4 OpenSpec — 最轻量，Brownfield 友好
+
+- **仓库**：[Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec) | **53K stars** | MIT
+- **架构**：TypeScript CLI（npm 包），openspec/ 目录存储规范和变更
+- **核心创新**：**Delta 规范模型**——变更表达为 ADDED/MODIFIED/REMOVED 相对于现有规范，而非重写
+
+**工作流**：Explore → Propose → Create Artifacts（DAG 驱动）→ Implement → Verify → Sync → Archive
+
+<ScoreCard
+  title="OpenSpec 维度评估（学术论文数据）"
+  scores={[
+    { label: "规范化", value: 2, max: 2 },
+    { label: "上下文管理", value: 1, max: 2 },
+    { label: "角色分离", value: 0, max: 2 },
+    { label: "执行能力", value: 1, max: 2 },
+    { label: "验证机制", value: 0, max: 2 },
+    { label: "可移植性", value: 2, max: 2 },
+  ]}
+/>
+
+<Callout type="insight">
+  OPSX 架构本质上是一个元框架：schemas 是 YAML 定义的工件 DAG + 可插拔 Markdown 模板。用户可以定义完全不同的开发流程（研究优先、快速迭代等），共享同一套变更管理基础设施。Delta spec 格式本质上是需求级别的 diff 语言，可以独立于代码级冲突进行规范级合并。
+</Callout>
+
+### 2.5 BMAD Method — 流程最深，角色分离最强
+
+- **仓库**：[bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) | **49K stars** | MIT
+- **架构**：微文件架构，每个步骤独立文件避免 LLM 注意力稀释
+- **核心创新**：**角色分离** + **SPEC.md 变更合约**（独占写入权，架构级约束而非流程级建议）
+
+**角色管线**：Analyst (Mary) → PM (John) → UX Designer (Sally) → Architect (Winston) → IR Gate → Developer (Amelia) → Tech Writer (Paige)
+
+<ScoreCard
+  title="BMAD 维度评估（学术论文数据，最高分 10/12）"
+  scores={[
+    { label: "规范化", value: 2, max: 2 },
+    { label: "上下文管理", value: 2, max: 2 },
+    { label: "角色分离", value: 2, max: 2 },
+    { label: "执行能力", value: 1, max: 2 },
+    { label: "验证机制", value: 2, max: 2 },
+    { label: "可移植性", value: 1, max: 2 },
+  ]}
+/>
+
+<Callout type="insight">
+  Web Bundles 策略揭示了一个隐含的经济学洞察：规划阶段不需要代码执行和文件操作，可以用廉价的月费 API（ChatGPT/Gemini Gems）完成，只有实现阶段才需要昂贵的 IDE agent token。大多数框架忽略了这个成本优化维度。
+</Callout>
+
+### 2.6 Compound Engineering — 知识复利最强
+
+- **仓库**：[EveryInc/compound-engineering-plugin](https://github.com/EveryInc/compound-engineering-plugin) | **20K stars** | MIT
+- **架构**：50+ 专用子代理，docs/solutions/ 结构化知识库 + CONCEPTS.md 词汇表
+- **核心创新**：**知识复利闭环**——ce-compound 自动文档化 → learnings-researcher 自动检索 → ce-plan 自动整合
+
+**知识循环核心**：每次完成工作 → ce-compound 并行调度 3 个子代理提取解决方案 → 写入 docs/solutions/（YAML frontmatter + Markdown）→ 下次 ce-plan 时 learnings-researcher 自动 grep 搜索历史方案 → 避免重复造轮子
+
+<ScoreCard
+  title="Compound Engineering 维度评估"
+  scores={[
+    { label: "知识积累闭环", value: 10, max: 10 },
+    { label: "多代理编排深度", value: 9, max: 10 },
+    { label: "跨平台兼容", value: 8, max: 10 },
+    { label: "Token 效率", value: 3, max: 10 },
+    { label: "社区参与度", value: 2, max: 10 },
+    { label: "跨仓库知识共享", value: 2, max: 10 },
+  ]}
+/>
+
+<Callout type="insight">
+  CONCEPTS.md 词汇表看似简单但极其重要——它解决了 AI 代理使用同义词导致搜索失败的问题。当所有技能和代理使用统一术语时，知识检索精度大幅提高。插件的核心洞察不是 AI 写代码更快，而是将工程中的隐性知识显性化为可搜索的结构化文档。
+</Callout>
+
+### 2.7 Spec Kitty — 治理最严谨，学术论文唯一满分验证
+
+- **仓库**：[Priivacy-ai/spec-kitty](https://github.com/Priivacy-ai/spec-kitty) | **1.3K stars** | MIT
+- **架构**：Python CLI，.kittify/ 目录（15+ 子目录），git worktree 隔离执行
+- **核心创新**：**回顾式学习循环**——结构化回顾 → 治理变更提案 → 人工审批 → 自动演进宪章/教条
+
+**工作流（10 步）**：Init → Charter → Specify → Plan → Tasks → Implement（worktree 隔离）→ Review → Accept → Merge → Retrospective
+
+<ScoreCard
+  title="Spec Kitty 维度评估（学术论文数据）"
+  scores={[
+    { label: "规范化", value: 2, max: 2 },
+    { label: "上下文管理", value: 2, max: 2 },
+    { label: "角色分离", value: 1, max: 2 },
+    { label: "执行能力", value: 2, max: 2 },
+    { label: "验证机制", value: 2, max: 2 },
+    { label: "可移植性", value: 2, max: 2 },
+  ]}
+/>
+
+<Callout type="warning">
+  成熟度是最大风险：v3.2.0 仍在 rc37，5 天内发布了 rc32-rc37 共 6 个版本，224 个 open issues。学术论文给出"Low confidence"评级。但其 git worktree 隔离和回顾机制在架构上是最强的。
+</Callout>
+
+---
+
+## 三、知识积累正循环模式分类
+
+<KeyFinding level="high">
+  6 种不同的知识积累模式已经出现，但只有 2 种实现了真正的主动反馈循环。
+</KeyFinding>
+
+<ComparisonMatrix
+  headers={["模式", "代表框架", "机制", "主动/被动", "跨项目能力"]}
+  rows={[
+    { "模式": "解决方案文档化闭环", "代表框架": "Compound Engineering", "机制": "自动提取方案→结构化存储→计划时自动检索", "主动/被动": "主动", "跨项目能力": "弱（仓库内）" },
+    { "模式": "回顾式治理演进", "代表框架": "Spec Kitty", "机制": "结构化回顾→治理变更提案→人工审批→宪章更新", "主动/被动": "主动", "跨项目能力": "中（治理可迁移）" },
+    { "模式": "全局学习库", "代表框架": "GSD", "机制": "跨项目学习存储→计划时检索", "主动/被动": "主动（但默认关）", "跨项目能力": "强（设计如此）" },
+    { "模式": "Delta 归档累积", "代表框架": "OpenSpec", "机制": "变更归档→规范自然增长→未来变更基于更丰富上下文", "主动/被动": "被动", "跨项目能力": "无" },
+    { "模式": "Constitution 治理", "代表框架": "Spec Kit, BMAD", "机制": "版本化治理文档→手动更新→影响下游模板", "主动/被动": "被动", "跨项目能力": "弱（预设可导出）" },
+    { "模式": "行为约束迭代", "代表框架": "Superpowers", "机制": "发现 LLM 逃避策略→更新合理化借口表→所有用户受益", "主动/被动": "元级主动", "跨项目能力": "全局（框架级）" },
+  ]}
+/>
+
+<Callout type="insight" title="真正有效的知识积累需要三个要素">
+  1. **自动触发**——不依赖人工纪律（Compound Engineering 的 auto-trigger 胜过 GSD 的 opt-in）
+  2. **结构化存储**——有 frontmatter 的文件比纯文本更易检索（YAML 元数据胜过纯 Markdown）
+  3. **计划时自动整合**——知识必须在新工作开始时主动注入上下文，而非等人去翻（grep-first 胜过需要人记得去看 archive）
+</Callout>
+
+---
+
+## 四、学术论文评估（Macedo 2026）
+
+论文 [arxiv 2606.04967v1](https://arxiv.org/html/2606.04967v1) 提出了首个可复现的 AI 开发框架对比评估工具，6 维度评分：
+
+<ComparisonMatrix
+  headers={["框架", "规范", "上下文", "角色", "执行", "验证", "可移植", "总分"]}
+  rows={[
+    { "框架": "[Spec-Flow](https://github.com/marcusgoll/Spec-Flow)", "规范": "2", "上下文": "2", "角色": "2", "执行": "2", "验证": "1", "可移植": "2", "总分": "11/12" },
+    { "框架": "BMAD", "规范": "2", "上下文": "2", "角色": "2", "执行": "1", "验证": "2", "可移植": "1", "总分": "10/12" },
+    { "框架": "Spec Kitty", "规范": "2", "上下文": "2", "角色": "1", "执行": "2", "验证": "2", "可移植": "2", "总分": "11/12" },
+    { "框架": "Spec Kit", "规范": "2", "上下文": "2", "角色": "1", "执行": "1", "验证": "1", "可移植": "2", "总分": "9/12" },
+    { "框架": "OpenSpec", "规范": "2", "上下文": "1", "角色": "0", "执行": "1", "验证": "0", "可移植": "2", "总分": "6/12" },
+    { "框架": "GSD", "规范": "1", "上下文": "2", "角色": "0", "执行": "1", "验证": "0", "可移植": "1", "总分": "5/12" },
+  ]}
+  highlight="Spec-Flow"
+/>
+
+<Callout type="warning" title="论文局限">
+  单一评分者，无评分者间一致性验证。论文作者同时是被评框架 Reversa 的作者（利益冲突已声明但无法完全消除）。最具区分度的维度是角色和验证，而非规范（规范已是共识）。
+</Callout>
+
+---
+
+## 五、被驳回的声明
+
+<VerdictCard claim="OpenSpec 支持 25+ AI 编码工具" verdict="rejected" votes="0/3">
+  实际可验证的集成约 15 个。官方 README 列出的部分工具仅为"理论支持"（任何能读 Markdown 的工具都"支持"），未经实际测试验证。
+</VerdictCard>
+
+<VerdictCard claim="OpenSpec 是最受欢迎的 spec 框架" verdict="rejected" votes="0/3">
+  Superpowers（219K）和 Spec Kit（109K）的 stars 均远高于 OpenSpec（53K）。该声明来自营销材料而非客观排名。
+</VerdictCard>
+
+<VerdictCard claim="规范驱动开发将传统 12 小时的文档工作压缩到 15 分钟" verdict="rejected" votes="0/3">
+  Spec Kit 文档中的声明。12 小时基准无来源，15 分钟数字无独立验证。不同项目复杂度差异极大，单一数字没有意义。
+</VerdictCard>
+
+<VerdictCard claim="Spec Kit 消除了规范与实现之间的差距" verdict="rejected" votes="0/3">
+  没有自动化的规范-代码双向同步。代码变更后规范不会自动更新，漂移是必然的。"消除差距"是愿景而非已实现功能。
+</VerdictCard>
+
+<VerdictCard claim="Spec Kit 学术论文评分 8/12" verdict="rejected" votes="0/3">
+  实际论文数据显示 Spec Kit 总分为 9/12（Specification=2, Context=2, Roles=1, Execution=1, Validation=1, Portability=2）。8/12 可能来自早期版本或错误引用。
+</VerdictCard>
+
+<VerdictCard claim="GitHub Spec Kit 有 109K+ stars" verdict="confirmed" votes="3/3">
+  通过 GitHub API 确认 109,364 stars（2026-06-06）。但增长速度异常——从 0 到 100K+ 在数月内完成，可能受 GitHub 官方品牌效应驱动。
+</VerdictCard>
+
+<VerdictCard claim="Superpowers 引用的说服研究（Meincke et al. 2025, N=28,000）提升合规率从 33% 到 72%" verdict="confirmed" votes="3/3">
+  该研究确实存在且被多个学术来源引用，结论可靠。Superpowers 基于此研究设计的权威性措辞策略有学术依据。
+</VerdictCard>
+
+---
+
+## 六、结构性权衡：可移植性 vs 流程深度
+
+<KeyFinding level="high">
+  可移植性和流程深度存在根本性张力。轻便的框架（OpenSpec、Spec Kit）支持 25-33 个 agent 但无法深度整合执行和验证；深流程框架（BMAD、Spec Kitty）提供强治理但耦合特定 agent 能力。没有框架同时解决了两者。
+</KeyFinding>
+
+<ComparisonMatrix
+  headers={["维度", "轻便流派", "深流程流派"]}
+  rows={[
+    { "维度": "代表", "轻便流派": "OpenSpec, Spec Kit", "深流程流派": "BMAD, Spec Kitty" },
+    { "维度": "Agent 兼容", "轻便流派": "25-33 个", "深流程流派": "5-10 个" },
+    { "维度": "角色分离", "轻便流派": "无/弱", "深流程流派": "强（多 persona 管线）" },
+    { "维度": "验证机制", "轻便流派": "弱（依赖 LLM 判断）", "深流程流派": "强（门控 + 结构化审查）" },
+    { "维度": "上手成本", "轻便流派": "分钟级", "深流程流派": "小时级" },
+    { "维度": "小任务适用性", "轻便流派": "好", "深流程流派": "差（仪式开销大）" },
+  ]}
+/>
+
+---
+
+## 七、选型指南
+
+<ComparisonMatrix
+  headers={["场景", "推荐框架", "理由"]}
+  rows={[
+    { "场景": "个人开发者，小项目，最低摩擦", "推荐框架": "OpenSpec", "理由": "秒级启动，delta 模型对已有项目友好" },
+    { "场景": "团队需要跨 sprint 积累知识", "推荐框架": "Compound Engineering", "理由": "唯一自动触发的知识文档化闭环" },
+    { "场景": "企业级流程治理和审计追踪", "推荐框架": "BMAD", "理由": "角色分离最强，流程评分最高（10/12）" },
+    { "场景": "严格工程纪律，TDD 强制", "推荐框架": "Superpowers", "理由": "LLM 行为控制工程最成熟" },
+    { "场景": "多 agent 并行开发复杂功能", "推荐框架": "Spec Kitty", "理由": "git worktree 隔离执行是架构最优解" },
+    { "场景": "大型 greenfield，上下文管理是瓶颈", "推荐框架": "GSD", "理由": "新鲜上下文子代理解决注意力退化" },
+    { "场景": "已深度使用 GitHub 生态", "推荐框架": "Spec Kit", "理由": "官方出品，原生 Issue 集成" },
+    { "场景": "预算敏感，需控制 token 成本", "推荐框架": "OpenSpec 或 BMAD (Web Bundles)", "理由": "规划阶段可用廉价 API 完成" },
+  ]}
+/>
+
+---
+
+## 八、领域趋势判断
+
+1. **上下文工程正在成为独立学科**：GSD 将"agent 该读什么、按什么顺序、在什么框架下"作为一等公民。Compound Engineering 用 grep-first 检索结构化 frontmatter。这种认识——LLM 输出质量由输入上下文质量主导，而非模型本身——正在催生独立于 prompt engineering 的新学科。
+
+2. **规范只是入场券，验证是前沿**：所有框架在 specification 维度得分 1-2，这已是共识。真正的分化在于能否验证实现与规范的一致性——目前没有框架能程序化地做到这一点，所有验证都依赖 LLM 判断，形成循环依赖。
+
+3. **AI 开发工具的供应链安全缺失**：社区扩展（schema、模板、预设）无签名、无权限范围、无验证机制。这是等待发生的"npm left-pad 事件"。
+
+4. **18 个月内大概率整合为 2-3 个存活者**：7 个高度重叠的框架不可持续。胜出者将是首先实现经验性验证、解决可移植性-深度权衡、并建立可持续生态的框架。
+
+5. **零经验性验证**：整个 spec-driven 开发范式建立在理论论证和用户证言之上。首个发布严格 A/B 测试结果的团队将对领域方向产生超比例影响力。
+
+---
+
+## 参考来源
+
+<ComparisonMatrix
+  headers={["来源", "类型"]}
+  rows={[
+    { "来源": "[Superpowers](https://github.com/obra/superpowers)", "类型": "主源" },
+    { "来源": "[GitHub Spec Kit](https://github.com/github/spec-kit)", "类型": "主源" },
+    { "来源": "[GSD Core](https://github.com/open-gsd/gsd-core)", "类型": "主源" },
+    { "来源": "[OpenSpec](https://github.com/Fission-AI/OpenSpec)", "类型": "主源" },
+    { "来源": "[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)", "类型": "主源" },
+    { "来源": "[Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)", "类型": "主源" },
+    { "来源": "[Spec Kitty](https://github.com/Priivacy-ai/spec-kitty)", "类型": "主源" },
+    { "来源": "[Macedo 2026 论文](https://arxiv.org/html/2606.04967v1)", "类型": "论文" },
+    { "来源": "[Spec-Flow](https://github.com/marcusgoll/Spec-Flow)", "类型": "主源" },
+    { "来源": "[ClaudeFast Skills 对比](https://claudefa.st/blog/tools/skills/best-claude-code-skills)", "类型": "博客" },
+  ]}
+/>
