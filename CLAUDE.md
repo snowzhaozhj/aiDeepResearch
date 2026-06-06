@@ -18,50 +18,34 @@ npm run preview  # 预览构建结果
 
 ```
 src/
-├── content/                  # Astro Content Collections（glob loader）
-│   ├── tools/                # 工具分析，按主题子目录
-│   │   ├── evaluation/       # 评估体系
-│   │   ├── frameworks/       # Agent 框架
-│   │   ├── protocols/        # 互操作协议
-│   │   ├── observability/    # 可观测性
-│   │   └── toolchain/        # 开发工具链
-│   ├── guides/               # 决策指南 & 对比分析
-│   └── reports/              # 综合研究报告
-├── content.config.ts         # Collection schema 定义
-├── layouts/Base.astro        # 全局布局（topbar + sidebar + content）
-├── styles/global.css         # 设计 token 和全局样式
-├── pages/
-│   ├── index.astro           # 首页（决策流 + 最近更新）
-│   ├── tools/index.astro     # 工具列表（按分类分组）
-│   ├── tools/[...slug].astro # 工具详情（动态路由）
-│   └── reports/[slug].astro  # 报告详情
-└── components/               # 可复用组件（待填充）
-experiments/                  # 可独立运行的实验代码
+├── content/
+│   └── research/            # 研究项目（每个子目录一篇，index.md 或 index.mdx）
+├── content.config.ts        # Collection schema（glob loader, pattern: **/index.{md,mdx}）
+├── components/              # MDX 可用的报告组件
+│   ├── KeyFinding.astro     # 核心发现高亮面板（level: high/medium/low）
+│   ├── VerdictCard.astro    # 声明验证结果（confirmed/rejected/partial）
+│   ├── ComparisonMatrix.astro # 对比表格（支持 [text](url) 链接语法）
+│   ├── Timeline.astro       # 事件时间线
+│   ├── ScoreCard.astro      # 多维度评分条形图
+│   └── Callout.astro        # 提示框（insight/warning/tip/note）
+├── layouts/Base.astro       # 全局布局（topbar + theme toggle + content）
+├── styles/global.css        # 设计 token（:root 亮色 / [data-theme="dark"] 暗色）
+└── pages/
+    ├── index.astro          # 首页（研究索引）
+    └── research/[...slug].astro  # 研究详情（TOC + 进度条）
 ```
 
 ## Frontmatter 规范
 
-### 工具（`src/content/tools/` 下）
-
-```yaml
-name: "工具名称"
-category: "evaluation"        # evaluation | frameworks | protocols | observability | toolchain
-tags: ["标签1", "标签2"]
-status: "active"              # active | deprecated | acquired | emerging
-confidence: "high"            # high | medium | low
-date: 2026-06-05
-repo: "https://github.com/..."  # 可选
-stars: 12800                    # 可选
-summary: "一行摘要"
-```
-
-### 报告（`src/content/reports/` 下）
+### 研究项目（`src/content/research/<topic>/index.{md,mdx}`）
 
 ```yaml
 title: "报告标题"
 date: 2026-06-05
+summary: "一行摘要"
+tags: ["标签1", "标签2"]
 method: "研究方法描述"       # 可选
-confidence: "high"
+confidence: "high"            # high | medium | low
 ```
 
 ## 语言与风格
@@ -81,6 +65,10 @@ confidence: "high"
 
 ## 工作方式
 
-- 新增工具分析时，在对应的 `src/content/tools/<category>/` 下创建 `.md` 文件
-- 新增研究主题前先检查仓库中是否已有相关内容
+- 新增研究时在 `src/content/research/<topic>/` 下创建 `index.mdx`
+- 优先用 `.mdx` 以利用组件增强视觉；纯文本内容可用 `.md`
+- 在 MDX 中通过 `import X from '@components/X.astro'` 导入组件
+- ComparisonMatrix 的 cell 值支持 `[text](url)` 自动渲染为链接
+- 所有提到的外部项目/工具必须附带链接（GitHub/官网/论文）
+- 新增研究前先检查仓库中是否已有相关内容
 - 引用外部资源时标注来源和日期
