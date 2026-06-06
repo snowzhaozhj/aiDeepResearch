@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Harness 生态系统深度研究报告</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-2: #232738;
+    --border: #2e3348;
+    --text: #e2e4ed;
+    --text-dim: #8b8fa7;
+    --accent: #6c8aff;
+    --accent-dim: rgba(108,138,255,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --orange: #fb923c;
+    --orange-dim: rgba(251,146,60,0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34,211,238,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #1a1d27 0%, #1e2340 50%, #1a1d27 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(108,138,255,0.06) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  .hero h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    position: relative;
+    background: linear-gradient(135deg, #e2e4ed 0%, #6c8aff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero .meta {
+    margin-top: 1rem;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    position: relative;
+  }
+
+  .hero .stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    position: relative;
+    flex-wrap: wrap;
+  }
+
+  .hero .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero .stat-num {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .hero .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .core-finding {
+    background: linear-gradient(135deg, var(--accent-dim), rgba(108,138,255,0.04));
+    border: 1px solid rgba(108,138,255,0.25);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 3rem;
+    position: relative;
+  }
+
+  .core-finding::before {
+    content: '核心发现';
+    position: absolute;
+    top: -0.7rem;
+    left: 1.5rem;
+    background: var(--bg);
+    padding: 0 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .core-finding p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+  }
+
+  .core-finding strong { color: #fff; }
+
+  section {
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .num-blue { background: var(--accent-dim); color: var(--accent); }
+  .num-green { background: var(--green-dim); color: var(--green); }
+  .num-purple { background: var(--purple-dim); color: var(--purple); }
+  .num-cyan { background: var(--cyan-dim); color: var(--cyan); }
+  .num-orange { background: var(--orange-dim); color: var(--orange); }
+  .num-red { background: var(--red-dim); color: var(--red); }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.6rem;
+    color: #fff;
+  }
+
+  p { margin-bottom: 0.8rem; color: var(--text); }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: var(--accent); }
+
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.15rem;
+  }
+
+  .card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 0.7rem;
+  }
+
+  .card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .card li {
+    padding: 0.25rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+    font-size: 0.92rem;
+    color: var(--text);
+  }
+
+  .card li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.65rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+
+  .card li strong { color: #fff; font-weight: 600; }
+
+  .card .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .tag-warn { background: var(--orange-dim); color: var(--orange); }
+  .tag-info { background: var(--accent-dim); color: var(--accent); }
+  .tag-ok { background: var(--green-dim); color: var(--green); }
+
+  .card a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+
+  .card a:hover { text-decoration: underline; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--border);
+  }
+
+  tbody td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:hover { background: var(--surface); }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .insight-box {
+    background: var(--surface);
+    border-left: 3px solid var(--orange);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    font-size: 0.92rem;
+  }
+
+  .insight-box .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.3rem;
+  }
+
+  .quote-box {
+    background: var(--surface-2);
+    border-left: 3px solid var(--purple);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .primitives-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.6rem;
+    margin: 1rem 0;
+  }
+
+  .primitive {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+
+  .primitive:hover { border-color: var(--cyan); }
+
+  .primitive-num {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 6px;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .refuted-table tbody td:first-child {
+    max-width: 400px;
+  }
+
+  .verdict {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .verdict-kill { background: var(--red-dim); color: var(--red); }
+  .verdict-pass { background: var(--green-dim); color: var(--green); }
+  .verdict-medium { background: var(--orange-dim); color: var(--orange); }
+
+  .open-questions ol {
+    padding-left: 1.4rem;
+    counter-reset: oq;
+    list-style: none;
+  }
+
+  .open-questions li {
+    counter-increment: oq;
+    margin-bottom: 0.8rem;
+    padding-left: 0.2rem;
+    position: relative;
+  }
+
+  .open-questions li::before {
+    content: counter(oq);
+    position: absolute;
+    left: -1.6rem;
+    top: 0.1rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    background: var(--purple-dim);
+    color: var(--purple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .protocol-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.6rem;
+    margin: 1rem 0;
+  }
+
+  .protocol-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .protocol-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .protocol-card .name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.2rem;
+  }
+
+  .protocol-card .desc {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .caveats {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin: 1rem 0;
+  }
+
+  .caveats ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .caveats li {
+    padding: 0.4rem 0;
+    padding-left: 1.4rem;
+    position: relative;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+  }
+
+  .caveats li::before {
+    content: '!';
+    position: absolute;
+    left: 0;
+    top: 0.45rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--orange-dim);
+    color: var(--orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  .sources-table { font-size: 0.85rem; }
+  .sources-table td { padding: 0.5rem 0.8rem; }
+
+  .source-type {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .st-primary { background: var(--green-dim); color: var(--green); }
+  .st-secondary { background: var(--accent-dim); color: var(--accent); }
+  .st-blog { background: var(--purple-dim); color: var(--purple); }
+  .st-forum { background: var(--orange-dim); color: var(--orange); }
+
+  .roadmap-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+  }
+
+  .roadmap-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .roadmap-list li:last-child { border-bottom: none; }
+
+  .roadmap-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .roadmap-text strong { color: #fff; }
+
+  .obs-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin: 1rem 0;
+  }
+
+  .obs-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .obs-card .name { font-weight: 700; color: #fff; margin-bottom: 0.3rem; }
+  .obs-card .desc { font-size: 0.82rem; color: var(--text-dim); }
+
+  .recommend-table tbody td:nth-child(1) { font-weight: 600; color: #fff; }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 1.6rem; }
+    .hero .stats { gap: 1rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .primitives-grid { grid-template-columns: repeat(2, 1fr); }
+    .protocol-cards { grid-template-columns: repeat(2, 1fr); }
+    .obs-cards { grid-template-columns: 1fr; }
+    .container { padding: 1.5rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>AI Harness 生态系统深度研究报告</h1>
+  <p class="meta">2026-06-05 | 5 角度并行搜索 &middot; 对抗验证 &middot; 事实核查</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-num">22</span><span class="stat-label">源抓取</span></div>
+    <div class="stat"><span class="stat-num">98</span><span class="stat-label">声明提取</span></div>
+    <div class="stat"><span class="stat-num">25</span><span class="stat-label">对抗验证</span></div>
+    <div class="stat"><span class="stat-num">19</span><span class="stat-label">确认通过</span></div>
+    <div class="stat"><span class="stat-num">6</span><span class="stat-label">驳回</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="core-finding">
+    <p><strong>Harness 质量决定 Agent 能否投产，而非仅模型质量。</strong> Anthropic 2026 年 4 月事后分析揭示，三个独立的 harness 层变更导致显著质量退化：reasoning-effort 从 high 降至 medium、缓存 bug 导致推理历史每轮清除、系统提示词变更导致 3% 性能下降。Harness 配置对最终效果的影响可达 <strong>5+ 个百分点</strong>。</p>
+  </div>
+
+  <!-- 一、评估体系 -->
+  <section>
+    <h2><span class="num num-blue">1</span>评估与基准测试体系</h2>
+    <p>Harness 生态中最成熟的层次，四个工具形成明确梯队。</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">lm-evaluation-harness</div>
+        <div class="card-subtitle">学术事实标准 &middot; 12.8k 星 &middot; <span class="tag tag-ok">HIGH</span></div>
+        <ul>
+          <li><strong>定位</strong>：Hugging Face Open LLM Leaderboard 后端，被数百篇论文引用</li>
+          <li><strong>能力</strong>：内置 60+ 标准基准（MMLU、HellaSwag、GSM8K、BBH 等），支持自定义任务</li>
+          <li><strong>适用</strong>：学术研究、模型排名、标准化基准对比</li>
+        </ul>
+        <a href="https://github.com/EleutherAI/lm-evaluation-harness" target="_blank">GitHub &rarr;</a>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Inspect AI</div>
+        <div class="card-subtitle">前沿安全评估 &middot; AISI + Meridian Labs &middot; <span class="tag tag-ok">HIGH</span></div>
+        <ul>
+          <li><strong>能力</strong>：200+ 预构建评估任务，内置 ReAct / Deep Agent</li>
+          <li><strong>集成</strong>：可桥接 Claude Code / Codex CLI / Gemini CLI，支持 Docker/K8s 沙箱</li>
+          <li><strong>模型</strong>：OpenAI / Anthropic / Google / vLLM / Ollama</li>
+        </ul>
+        <a href="https://github.com/UKGovernmentBEIS/inspect_ai" target="_blank">GitHub &rarr;</a>
+      </div>
+
+      <div class="card">
+        <div class="card-title">DeepEval</div>
+        <div class="card-subtitle">pytest 集成 &middot; LLM-as-Judge &middot; <span class="tag tag-ok">HIGH</span></div>
+        <ul>
+          <li><strong>范式</strong>：assert_test 风格，将 LLM 评估嵌入 pytest 工作流</li>
+          <li><strong>指标</strong>：几乎所有内置指标为 LLM-as-Judge 类型，分数 0-1 可配置阈值</li>
+          <li><strong>注意</strong>：需要 API 密钥，有成本和延迟开销 <span class="tag tag-warn">注意</span></li>
+        </ul>
+        <a href="https://deepeval.com/docs/getting-started" target="_blank">官方文档 &rarr;</a>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Promptfoo</div>
+        <div class="card-subtitle">21.9k 星 &middot; <span class="tag tag-warn">已被 OpenAI 收购</span></div>
+        <ul>
+          <li><strong>定位</strong>：开源 LLM 测试与评估 CLI 工具</li>
+          <li><strong>变化</strong>：2026 年 3 月被 OpenAI 收购</li>
+          <li><strong>风险</strong>：收购后开源策略和多模型中立性存疑</li>
+        </ul>
+        <a href="https://www.promptfoo.dev/docs/intro/" target="_blank">官方文档 &rarr;</a>
+      </div>
+    </div>
+
+    <h3>选型建议</h3>
+    <table class="recommend-table">
+      <thead><tr><th>场景</th><th>推荐</th></tr></thead>
+      <tbody>
+        <tr><td>学术论文、标准排名</td><td>lm-evaluation-harness</td></tr>
+        <tr><td>AI 安全、Agent 沙箱评估</td><td>Inspect AI</td></tr>
+        <tr><td>工程团队 CI/CD 集成</td><td>DeepEval</td></tr>
+        <tr><td>快速原型红队测试</td><td>Promptfoo（注意收购风险）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 二、Agent 框架 -->
+  <section>
+    <h2><span class="num num-green">2</span>Agent 框架与编排</h2>
+
+    <h3>流行度 Top 5（2026 年 6 月快照）</h3>
+    <table>
+      <thead><tr><th>#</th><th>框架</th><th>星标</th><th>核心特点</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>n8n</strong></td><td>~189k</td><td>可视化工作流编排，低代码</td></tr>
+        <tr><td>2</td><td><strong>AutoGPT</strong></td><td>~184k</td><td>自主 Agent 先驱</td></tr>
+        <tr><td>3</td><td><strong>langflow</strong></td><td>~148k</td><td>LangChain 可视化编排</td></tr>
+        <tr><td>4</td><td><strong>Dify</strong></td><td>~142k</td><td>全栈 LLM 应用开发平台</td></tr>
+        <tr><td>5</td><td><strong>LangChain</strong></td><td>~137k</td><td>Agent/RAG 生态最大</td></tr>
+      </tbody>
+    </table>
+
+    <div class="insight-box">
+      <div class="label">关键洞察</div>
+      <strong>流行度与流程完备性正交。</strong>
+      Macedo 2026 论文（<a href="https://arxiv.org/html/2606.04967v1" target="_blank">arxiv 2606.04967v1</a>）对框架进行六维度评估，发现：BMAD Method 以 10/12 分领先但可移植性不足；GSD 上下文工程最强但与 Claude Code 强耦合；仅 85 星的 Spec-Flow 却获 11/12 最高分——<strong>星标数不反映工程质量</strong>。
+    </div>
+
+    <div class="insight-box">
+      <div class="label">置信度</div>
+      该论文为未经同行评审的 arxiv 预印本，单一评分者。结论有参考价值但需谨慎引用。
+    </div>
+  </section>
+
+  <!-- 三、Harness 工程体系化 -->
+  <section>
+    <h2><span class="num num-purple">3</span>Harness 工程体系化</h2>
+    <p><a href="https://github.com/ai-boost/awesome-harness-engineering" target="_blank">awesome-harness-engineering</a> 将 harness 工程体系化为 12 个设计原语：</p>
+
+    <div class="primitives-grid">
+      <div class="primitive"><span class="primitive-num">1</span>Agent Loop</div>
+      <div class="primitive"><span class="primitive-num">2</span>Planning</div>
+      <div class="primitive"><span class="primitive-num">3</span>Context Delivery</div>
+      <div class="primitive"><span class="primitive-num">4</span>Tool Design</div>
+      <div class="primitive"><span class="primitive-num">5</span>Skills / MCP</div>
+      <div class="primitive"><span class="primitive-num">6</span>Permissions</div>
+      <div class="primitive"><span class="primitive-num">7</span>Memory</div>
+      <div class="primitive"><span class="primitive-num">8</span>Task Runners</div>
+      <div class="primitive"><span class="primitive-num">9</span>Verification</div>
+      <div class="primitive"><span class="primitive-num">10</span>Observability</div>
+      <div class="primitive"><span class="primitive-num">11</span>Debugging</div>
+      <div class="primitive"><span class="primitive-num">12</span>Human-in-the-Loop</div>
+    </div>
+
+    <h3>追踪资源</h3>
+    <table>
+      <thead><tr><th>资源</th><th>规模</th><th>更新频率</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="https://github.com/RyanAlberts/best-of-Agent-Harnesses" target="_blank">best-of-Agent-Harnesses</a></td>
+          <td>101 个项目，9 大类别</td>
+          <td>每周更新</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/ARUNAGIRINATHAN-K/awesome-ai-agents-2026" target="_blank">awesome-ai-agents-2026</a></td>
+          <td>431 个条目，32 个分类</td>
+          <td>社区维护</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 四、AgentOps -->
+  <section>
+    <h2><span class="num num-cyan">4</span>AgentOps — 新兴运维范式</h2>
+
+    <h3>为什么传统监控不够</h3>
+    <div class="quote-box">
+      "Agent failures may be trajectory-level and semantic... all tool calls can return successful status codes."
+      <br><span style="font-style: normal; font-size: 0.8rem;">— <a href="https://arxiv.org/html/2606.01581v1" target="_blank">arxiv 2606.01581v1</a>，13 位研究者的学术调研</span>
+    </div>
+    <p>Agent 故障是<strong>轨迹级和语义级</strong>的——涉及意图、约束、工具使用顺序、决策推理——传统 HTTP 状态码和指标监控可能完全遗漏。</p>
+
+    <h3>代表性可观测性平台（17+ 个）</h3>
+    <div class="obs-cards">
+      <div class="obs-card">
+        <div class="name">LangFuse</div>
+        <div class="desc">OpenTelemetry 集成<br>最活跃开源工具之一</div>
+      </div>
+      <div class="obs-card">
+        <div class="name">LangDB</div>
+        <div class="desc">首个全 Rust 实现<br>性能导向</div>
+      </div>
+      <div class="obs-card">
+        <div class="name">Helicone</div>
+        <div class="desc">可观测性 + 缓存管理<br>兼顾成本控制</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 五、协议全景 -->
+  <section>
+    <h2><span class="num num-orange">5</span>互操作协议全景</h2>
+    <p>Google 开发者博客（2026-03-18）描述了六大 AI 代理互操作协议：</p>
+
+    <div class="protocol-cards">
+      <div class="protocol-card">
+        <div class="name">MCP</div>
+        <div class="desc">工具/数据连接<br><span style="color:var(--text-dim);font-size:0.72rem;">Anthropic 主导</span></div>
+      </div>
+      <div class="protocol-card">
+        <div class="name">A2A</div>
+        <div class="desc">代理间路由<br><span style="color:var(--text-dim);font-size:0.72rem;">Google 主导</span></div>
+      </div>
+      <div class="protocol-card">
+        <div class="name">UCP</div>
+        <div class="desc">商务工作流</div>
+      </div>
+      <div class="protocol-card">
+        <div class="name">AP2</div>
+        <div class="desc">支付授权</div>
+      </div>
+      <div class="protocol-card">
+        <div class="name">A2UI</div>
+        <div class="desc">代理驱动 UI</div>
+      </div>
+      <div class="protocol-card">
+        <div class="name">AG-UI</div>
+        <div class="desc">流式事件格式</div>
+      </div>
+    </div>
+
+    <h3>MCP 2026 路线图</h3>
+    <p style="font-size:0.85rem;color:var(--text-dim);">首席维护者 David Soria Parra 于 2026-03-09 发布（<a href="https://blog.modelcontextprotocol.io" target="_blank">MCP 官方博客</a>）</p>
+    <ul class="roadmap-list">
+      <li><span class="roadmap-icon">1</span><div class="roadmap-text"><strong>水平扩展传输</strong> — 超越单进程 stdio</div></li>
+      <li><span class="roadmap-icon">2</span><div class="roadmap-text"><strong>.well-known 发现</strong> — 标准化服务发现</div></li>
+      <li><span class="roadmap-icon">3</span><div class="roadmap-text"><strong>Tasks 原语</strong> — 含重试/过期语义</div></li>
+      <li><span class="roadmap-icon">4</span><div class="roadmap-text"><strong>企业扩展</strong> — 审计 / SSO / 网关</div></li>
+    </ul>
+  </section>
+
+  <!-- 六、被驳回的声明 -->
+  <section>
+    <h2><span class="num num-red">6</span>被驳回的声明（值得警惕）</h2>
+    <p>以下在社区中流传但经对抗验证被 0-3 驳回的声明，反映了 harness 领域<strong>效果夸大</strong>的倾向：</p>
+
+    <table class="refuted-table">
+      <thead><tr><th>声明</th><th>判定</th><th>问题</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>LangChain 编码代理仅通过 harness 调优从第 30 名升至前 5</td>
+          <td><span class="verdict verdict-kill">0-3 驳回</span></td>
+          <td>无法从主源验证</td>
+        </tr>
+        <tr>
+          <td>Statewright 使本地模型在 SWE-bench 上从 2/10 升至 10/10</td>
+          <td><span class="verdict verdict-kill">0-3 驳回</span></td>
+          <td>定量声明不可追溯</td>
+        </tr>
+        <tr>
+          <td>Agent 协议形成 MCP/A2A/ACP &ldquo;三足鼎立&rdquo;</td>
+          <td><span class="verdict verdict-kill">0-3 驳回</span></td>
+          <td>过度简化，实际有 6+ 协议</td>
+        </tr>
+        <tr>
+          <td>SWE-Agent 成功率低于 40%</td>
+          <td><span class="verdict verdict-kill">0-3 驳回</span></td>
+          <td>数据点过时或不准确</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="insight-box">
+      <div class="label">启示</div>
+      Harness 领域的二手源定量声明需回溯主源验证，不可轻信。
+    </div>
+  </section>
+
+  <!-- 七、待深入问题 -->
+  <section class="open-questions">
+    <h2><span class="num num-purple">7</span>待深入研究的问题</h2>
+    <ol>
+      <li><strong>评估框架横向对比</strong>：lm-evaluation-harness / Inspect AI / DeepEval / Promptfoo 在生产环境中的性能开销和集成复杂度尚缺横向基准</li>
+      <li><strong>MCP Tasks 原语落地时间</strong>：决定 MCP 能否从开发工具协议升级为生产级 Agent 通信基础设施</li>
+      <li><strong>Promptfoo 收购后走向</strong>：开源策略和多模型中立性变化对生态影响</li>
+      <li><strong>中文生态覆盖不足</strong>：Dify（142k 星）和 langflow（148k 星）等中国团队主导的项目在学术评估论文中完全缺席，其 harness 工程实践值得独立研究</li>
+    </ol>
+  </section>
+
+  <!-- 研究方法与局限 -->
+  <section>
+    <h2><span class="num num-orange">!</span>研究方法与局限</h2>
+    <div class="caveats">
+      <ul>
+        <li><strong>方法</strong>：5 个搜索角度并行 &rarr; 22 个源抓取 &rarr; 98 条声明提取 &rarr; 25 条三票制对抗验证（需 2/3 驳回才剔除）</li>
+        <li><strong>时效性</strong>：GitHub 星标为 2026 年 6 月初快照；两篇核心论文（arxiv 2606.04967v1、2606.01581v1）为未经同行评审的预印本</li>
+        <li><strong>生态偏向</strong>：验证源主要覆盖英文生态，中文生态工具分析不足</li>
+        <li><strong>主源可达性</strong>：Anthropic 2026 年趋势报告 URL 已 404，&ldquo;5+ 百分点波动&rdquo;数据点无法直接验证主源（但事后分析数据支撑其可信度）</li>
+        <li><strong>夸大倾向</strong>：LangChain 调优、Statewright 等声明被 0-3 驳回，说明二手源定量声明需谨慎对待</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 来源索引 -->
+  <section>
+    <h2><span class="num num-blue">&#9776;</span>来源索引</h2>
+    <table class="sources-table">
+      <thead><tr><th>来源</th><th>类型</th><th>角度</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness" target="_blank">lm-evaluation-harness</a></td><td><span class="source-type st-primary">主源</span></td><td>评估体系</td></tr>
+        <tr><td><a href="https://github.com/UKGovernmentBEIS/inspect_ai" target="_blank">Inspect AI</a></td><td><span class="source-type st-primary">主源</span></td><td>评估体系</td></tr>
+        <tr><td><a href="https://deepeval.com/docs/getting-started" target="_blank">DeepEval 文档</a></td><td><span class="source-type st-primary">主源</span></td><td>评估体系</td></tr>
+        <tr><td><a href="https://www.promptfoo.dev/docs/intro/" target="_blank">Promptfoo 文档</a></td><td><span class="source-type st-primary">主源</span></td><td>评估体系</td></tr>
+        <tr><td><a href="https://github.com/ai-boost/awesome-harness-engineering" target="_blank">awesome-harness-engineering</a></td><td><span class="source-type st-secondary">聚合</span></td><td>生态全景</td></tr>
+        <tr><td><a href="https://github.com/RyanAlberts/best-of-Agent-Harnesses" target="_blank">best-of-Agent-Harnesses</a></td><td><span class="source-type st-secondary">聚合</span></td><td>框架排名</td></tr>
+        <tr><td><a href="https://github.com/ARUNAGIRINATHAN-K/awesome-ai-agents-2026" target="_blank">awesome-ai-agents-2026</a></td><td><span class="source-type st-secondary">聚合</span></td><td>工具目录</td></tr>
+        <tr><td><a href="https://arxiv.org/html/2606.04967v1" target="_blank">Macedo 2026 框架评估</a></td><td><span class="source-type st-primary">论文</span></td><td>框架对比</td></tr>
+        <tr><td><a href="https://arxiv.org/html/2606.01581v1" target="_blank">AgentOps 调研论文</a></td><td><span class="source-type st-primary">论文</span></td><td>运维范式</td></tr>
+        <tr><td><a href="https://blog.modelcontextprotocol.io" target="_blank">MCP 官方博客</a></td><td><span class="source-type st-primary">主源</span></td><td>协议路线图</td></tr>
+        <tr><td><a href="https://developers.googleblog.com" target="_blank">Google 开发者博客</a></td><td><span class="source-type st-primary">主源</span></td><td>协议全景</td></tr>
+        <tr><td><a href="https://anthropic.com/engineering/april-23-postmortem" target="_blank">Anthropic 4 月事后分析</a></td><td><span class="source-type st-primary">主源</span></td><td>Harness 影响</td></tr>
+        <tr><td><a href="https://blog.jetbrains.com/pycharm/2026/06/top-agentic-frameworks-for-building-applications-2026/" target="_blank">JetBrains 框架指南</a></td><td><span class="source-type st-blog">博客</span></td><td>框架对比</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+</body>
+</html>

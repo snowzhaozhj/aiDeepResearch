@@ -1,0 +1,38 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getCollection, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const reports = await getCollection("reports");
+  return reports.map((report) => ({
+    params: { slug: report.id },
+    props: { report },
+  }));
+}
+
+const { report } = Astro.props;
+const { Content } = await render(report);
+---
+
+<Base title={`${report.data.title} — Harness Lab`}>
+  <div class="report-head">
+    <h1 class="t-display">{report.data.title}</h1>
+    <div class="report-meta">
+      <span>{report.data.date.toLocaleDateString("zh-CN")}</span>
+      {report.data.method && <span>{report.data.method}</span>}
+    </div>
+  </div>
+
+  <div class="prose">
+    <Content />
+  </div>
+</Base>
+
+<style>
+  .report-head { margin-bottom: 3rem; }
+  .report-head .t-display { margin-bottom: 0.5rem; }
+  .report-meta {
+    display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem;
+    font-size: 0.8125rem; color: var(--muted);
+  }
+</style>

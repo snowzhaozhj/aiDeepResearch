@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Harness Lab</title>
+<style>
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  :root {
+    --bg:         oklch(1.000 0.000 0);
+    --surface:    oklch(0.975 0.002 265);
+    --surface-2:  oklch(0.955 0.004 265);
+    --border:     oklch(0.91 0.006 265);
+    --border-dim: oklch(0.94 0.004 265);
+
+    --ink:        oklch(0.15 0.010 265);
+    --ink-2:      oklch(0.30 0.010 265);
+    --muted:      oklch(0.49 0.008 265);
+
+    --primary:    oklch(0.52 0.17 357);
+    --primary-dim:oklch(0.52 0.17 357 / 0.08);
+    --primary-bg: oklch(0.96 0.015 357);
+
+    --accent:     oklch(0.42 0.11 230);
+    --accent-dim: oklch(0.42 0.11 230 / 0.07);
+
+    --green:      oklch(0.48 0.14 155);
+    --green-dim:  oklch(0.48 0.14 155 / 0.09);
+    --orange:     oklch(0.55 0.14 55);
+    --orange-dim: oklch(0.55 0.14 55 / 0.09);
+    --red:        oklch(0.50 0.16 25);
+    --red-dim:    oklch(0.50 0.16 25 / 0.08);
+    --purple:     oklch(0.48 0.15 300);
+    --purple-dim: oklch(0.48 0.15 300 / 0.08);
+
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --r: 6px;
+    --r-lg: 10px;
+
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Noto Sans SC", sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  ::selection { background: var(--primary-dim); }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100dvh;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .brand-mark {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .brand-mark svg { display: block; }
+
+  .search {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--r);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: border-color 200ms var(--ease);
+    min-width: 220px;
+    background: var(--bg);
+  }
+
+  .search:hover { border-color: var(--primary); }
+
+  .search kbd {
+    margin-left: auto;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font: 0.65rem var(--mono);
+    color: var(--muted);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 1rem 0;
+    overflow-y: auto;
+    position: sticky;
+    top: 52px;
+    height: calc(100dvh - 52px);
+    font-size: 0.8125rem;
+  }
+
+  .nav-group { margin-bottom: 1.4rem; }
+
+  .nav-label {
+    padding: 0 1rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 0.2rem;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 1rem;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: all 120ms var(--ease);
+    font-weight: 400;
+  }
+
+  .nav-item:hover {
+    color: var(--ink);
+    background: oklch(0.15 0.010 265 / 0.04);
+  }
+
+  .nav-item.active {
+    color: var(--primary);
+    font-weight: 600;
+    background: var(--primary-dim);
+    border-radius: var(--r);
+    margin: 0 0.5rem;
+    padding-left: 0.5rem;
+  }
+
+  .nav-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    opacity: 0.4;
+    flex-shrink: 0;
+  }
+
+  /* ── Main ── */
+  .main {
+    padding: 2.5rem 3rem 5rem;
+    max-width: 820px;
+    overflow-y: auto;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Typography ── */
+  .t-display {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .t-title {
+    font-size: 1.5rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .t-heading {
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .t-body {
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: var(--ink);
+    max-width: 68ch;
+  }
+
+  .t-small {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .t-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .badge-high    { background: var(--green-dim);  color: var(--green); }
+  .badge-medium  { background: var(--orange-dim); color: var(--orange); }
+  .badge-low     { background: var(--red-dim);    color: var(--red); }
+  .badge-active  { background: var(--green-dim);  color: var(--green); }
+  .badge-acquired{ background: var(--orange-dim); color: var(--orange); }
+  .badge-emerging{ background: var(--purple-dim); color: var(--purple); }
+
+  /* ═══ HOME ═══ */
+  .home-intro {
+    margin-bottom: 3.5rem;
+  }
+
+  .home-intro .t-display { margin-bottom: 0.6rem; }
+
+  .home-intro .lead {
+    font-size: 1.0625rem;
+    color: var(--ink-2);
+    max-width: 52ch;
+    line-height: 1.65;
+    font-weight: 400;
+  }
+
+  /* Decision Flow */
+  .flow {
+    margin-bottom: 4rem;
+  }
+
+  .flow > .t-heading { margin-bottom: 1.2rem; }
+
+  .flow-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .flow-entry {
+    display: grid;
+    grid-template-columns: 3.2rem 1fr auto;
+    align-items: start;
+    gap: 0 1rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    cursor: pointer;
+    transition: background 200ms var(--ease);
+  }
+
+  .flow-entry:first-child { border-top: 1px solid var(--border-dim); }
+
+  .flow-entry:hover { background: oklch(0.15 0.010 265 / 0.02); }
+
+  .flow-icon {
+    width: 3.2rem; height: 3.2rem;
+    border-radius: var(--r-lg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .flow-entry h3 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.1rem;
+  }
+
+  .flow-entry p {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .flow-arrow {
+    color: var(--muted);
+    font-size: 1rem;
+    padding-top: 0.3rem;
+    transition: transform 200ms var(--ease), color 200ms var(--ease);
+  }
+
+  .flow-entry:hover .flow-arrow {
+    transform: translateX(3px);
+    color: var(--primary);
+  }
+
+  .flow-entry.open .flow-arrow {
+    transform: rotate(90deg);
+    color: var(--primary);
+  }
+
+  /* Decision sub-tree */
+  .flow-tree {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 300ms var(--ease);
+    grid-column: 1 / -1;
+  }
+
+  .flow-tree.open { grid-template-rows: 1fr; }
+
+  .flow-tree-inner {
+    overflow: hidden;
+  }
+
+  .tree-content {
+    padding: 0.6rem 0 0.6rem 4.2rem;
+  }
+
+  .tree-q {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink-2);
+    margin-bottom: 0.3rem;
+    padding-top: 0.5rem;
+  }
+
+  .tree-q:first-child { padding-top: 0; }
+
+  .tree-answer {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    margin-left: 0.8rem;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: background 120ms var(--ease);
+    font-size: 0.8125rem;
+  }
+
+  .tree-answer:hover { background: var(--primary-dim); }
+
+  .tree-answer .name {
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  .tree-answer .why {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  /* Recent */
+  .recent { margin-bottom: 3rem; }
+  .recent .t-heading { margin-bottom: 0.8rem; }
+
+  .recent-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .recent-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    cursor: pointer;
+    transition: background 120ms var(--ease);
+  }
+
+  .recent-row:first-child { border-top: 1px solid var(--border-dim); }
+
+  .recent-row:hover { background: oklch(0.15 0.010 265 / 0.02); }
+
+  .recent-row .rr-name {
+    font-weight: 550;
+    font-size: 0.875rem;
+  }
+
+  .recent-row .rr-summary {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.05rem;
+  }
+
+  .recent-row .badges {
+    display: flex; gap: 0.3rem;
+    white-space: nowrap;
+  }
+
+  .recent-row .rr-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ═══ TOOLS LIST ═══ */
+  .page-head {
+    margin-bottom: 2rem;
+  }
+
+  .page-head .t-title { margin-bottom: 0.3rem; }
+  .page-head .t-body { color: var(--muted); }
+
+  .filters {
+    display: flex; gap: 0.3rem; flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-chip {
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 120ms var(--ease);
+    font-family: var(--font);
+  }
+
+  .filter-chip:hover { border-color: var(--ink-2); color: var(--ink-2); }
+
+  .filter-chip.on {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+
+  /* tools grouped by category */
+  .cat-group { margin-bottom: 2.5rem; }
+
+  .cat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 0;
+    display: inline-block;
+  }
+
+  .cat-tools {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tool-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    cursor: pointer;
+    transition: background 120ms var(--ease);
+  }
+
+  .tool-item:hover { background: oklch(0.15 0.010 265 / 0.02); margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: var(--r); }
+
+  .tool-item .ti-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--ink);
+  }
+
+  .tool-item .ti-desc {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    margin-top: 0.05rem;
+    max-width: 55ch;
+  }
+
+  .tool-item .ti-meta {
+    display: flex; align-items: center; gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .stars-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ═══ DETAIL ═══ */
+  .back-link {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    cursor: pointer;
+    transition: color 150ms var(--ease);
+  }
+
+  .back-link:hover { color: var(--primary); text-decoration: none; }
+
+  .detail-head {
+    margin-bottom: 3rem;
+  }
+
+  .detail-head .t-display {
+    margin-bottom: 0.5rem;
+  }
+
+  .detail-head .tagline {
+    font-size: 1.0625rem;
+    color: var(--ink-2);
+    max-width: 58ch;
+    line-height: 1.65;
+    margin-bottom: 1.2rem;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .meta-tag {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .meta-tag a { font-size: 0.75rem; }
+
+  /* Prose */
+  .prose { max-width: 68ch; }
+
+  .prose h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-top: 3rem;
+    margin-bottom: 0.7rem;
+    color: var(--ink);
+  }
+
+  .prose h3 {
+    font-size: 1rem;
+    font-weight: 650;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose p {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+  }
+
+  .prose ul { padding-left: 1.2rem; margin-bottom: 1rem; }
+  .prose li { margin-bottom: 0.35rem; line-height: 1.7; }
+  .prose strong { font-weight: 650; color: var(--ink); }
+
+  /* Insight callout — no side stripe, uses background tint + icon */
+  .insight {
+    background: var(--primary-bg);
+    border: 1px solid oklch(0.52 0.17 357 / 0.12);
+    border-radius: var(--r-lg);
+    padding: 1.1rem 1.3rem;
+    margin: 1.5rem 0;
+  }
+
+  .insight-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 0.3rem;
+    display: flex; align-items: center; gap: 0.3rem;
+  }
+
+  .insight p { margin-bottom: 0; font-size: 0.875rem; line-height: 1.7; color: var(--ink-2); }
+
+  .tip {
+    background: oklch(0.48 0.14 155 / 0.06);
+    border: 1px solid oklch(0.48 0.14 155 / 0.12);
+    border-radius: var(--r-lg);
+    padding: 1.1rem 1.3rem;
+    margin: 1.5rem 0;
+  }
+
+  .tip-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.3rem;
+  }
+
+  .tip p { margin-bottom: 0; font-size: 0.875rem; line-height: 1.7; color: var(--ink-2); }
+
+  /* Comparison — breakout width */
+  .breakout {
+    max-width: 90ch;
+    margin: 1.5rem 0;
+  }
+
+  .comparison table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .comparison th {
+    text-align: left;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .comparison td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border-dim);
+    vertical-align: top;
+    color: var(--ink-2);
+  }
+
+  .comparison tr:hover td { background: oklch(0.15 0.010 265 / 0.02); }
+
+  /* ═══ REPORT ═══ */
+  .report-head {
+    margin-bottom: 3rem;
+  }
+
+  .report-head .t-display { margin-bottom: 0.5rem; }
+
+  .report-meta {
+    display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+
+  .report-method {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+
+  .method-step {
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--r);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--ink-2);
+  }
+
+  .method-step .num {
+    font-weight: 750;
+    font-size: 0.875rem;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .method-arrow {
+    color: var(--muted);
+    font-size: 0.75rem;
+    display: flex; align-items: center;
+  }
+
+  /* Finding */
+  .finding {
+    padding: 1.2rem 0;
+    border-bottom: 1px solid var(--border-dim);
+  }
+
+  .finding:first-of-type { border-top: 1px solid var(--border-dim); }
+
+  .finding-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .finding-claim {
+    font-size: 0.9375rem;
+    font-weight: 550;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  .finding-evidence {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 65ch;
+  }
+
+  .finding-sources {
+    margin-top: 0.5rem;
+    display: flex; flex-wrap: wrap; gap: 0.25rem;
+  }
+
+  .source-tag {
+    font-size: 0.6875rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .sep {
+    height: 1px;
+    background: var(--border);
+    margin: 2.5rem 0;
+  }
+
+  .section-link {
+    font-size: 0.8125rem;
+    color: var(--primary);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 7L5 3L8 7L11 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11L5 7L8 11L11 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        </svg>
+      </div>
+      Harness Lab
+    </div>
+    <div class="search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+      搜索工具、指南...
+      <kbd>⌘K</kbd>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-group">
+      <div class="nav-item active" onclick="go('home')">首页</div>
+      <div class="nav-item" onclick="go('tools')">工具目录</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">评估体系</div>
+      <div class="nav-item" onclick="go('detail')"><span class="nav-dot" style="background:var(--green)"></span>lm-eval-harness</div>
+      <div class="nav-item" onclick="go('inspect')"><span class="nav-dot" style="background:var(--green)"></span>Inspect AI</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--green)"></span>DeepEval</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--orange)"></span>Promptfoo</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Agent 框架</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--muted)"></span>n8n</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--muted)"></span>LangChain</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--muted)"></span>Dify</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">协议</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--green)"></span>MCP</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--muted)"></span>A2A</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">可观测性</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--purple)"></span>LangFuse</div>
+      <div class="nav-item"><span class="nav-dot" style="background:var(--muted)"></span>Helicone</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">报告</div>
+      <div class="nav-item" onclick="go('report')">生态系统报告</div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ═══ HOME ═══ -->
+    <div class="page active" id="p-home">
+      <div class="home-intro">
+        <h1 class="t-display">找到适合你的<br>AI Harness 工具</h1>
+        <p class="lead">有观点的技术选型指南。每个结论标注置信度，每个推荐说明适用场景。</p>
+      </div>
+
+      <div class="flow">
+        <h2 class="t-heading">从问题出发</h2>
+        <div class="flow-entries">
+
+          <div class="flow-entry" onclick="toggleFlow(this)">
+            <div class="flow-icon" style="background:var(--green-dim);color:var(--green)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <h3>评估 LLM / Agent 质量</h3>
+              <p>基准测试、CI 集成、安全评估、红队测试</p>
+            </div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-tree"><div class="flow-tree-inner"><div class="tree-content">
+              <div class="tree-q">学术论文或排行榜对比？</div>
+              <div class="tree-answer" onclick="event.stopPropagation();go('detail')"><span class="name">lm-evaluation-harness</span><span class="why">HF 排行榜后端，60+ 基准</span></div>
+              <div class="tree-q">需要 CI/CD 自动化？</div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">DeepEval</span><span class="why">pytest 集成</span></div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">Promptfoo</span><span class="why">跨模型对比（已被收购）</span></div>
+              <div class="tree-q">AI 安全 / Agent 行为评估？</div>
+              <div class="tree-answer" onclick="event.stopPropagation();go('inspect')"><span class="name">Inspect AI</span><span class="why">200+ 任务，沙箱隔离</span></div>
+            </div></div></div>
+          </div>
+
+          <div class="flow-entry" onclick="toggleFlow(this)">
+            <div class="flow-icon" style="background:var(--accent-dim);color:var(--accent)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            </div>
+            <div>
+              <h3>构建 Agent 应用</h3>
+              <p>低代码编排、代码框架、全栈平台</p>
+            </div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-tree"><div class="flow-tree-inner"><div class="tree-content">
+              <div class="tree-q">需要可视化 / 低代码？</div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">Dify</span><span class="why">全栈平台，142k 星</span></div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">n8n</span><span class="why">工作流编排，189k 星</span></div>
+              <div class="tree-q">纯代码控制？</div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">LangChain</span><span class="why">最大生态</span></div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">BMAD Method</span><span class="why">流程最完备 10/12</span></div>
+            </div></div></div>
+          </div>
+
+          <div class="flow-entry" onclick="toggleFlow(this)">
+            <div class="flow-icon" style="background:var(--purple-dim);color:var(--purple)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div>
+              <h3>监控 Agent 运行</h3>
+              <p>可观测性、语义级故障诊断、成本管理</p>
+            </div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-tree"><div class="flow-tree-inner"><div class="tree-content">
+              <div class="tree-q">已有 OpenTelemetry 体系？</div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">LangFuse</span><span class="why">OTel 原生</span></div>
+              <div class="tree-q">性能敏感？</div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">LangDB</span><span class="why">全 Rust</span></div>
+              <div class="tree-q">兼顾成本管理？</div>
+              <div class="tree-answer" onclick="event.stopPropagation()"><span class="name">Helicone</span><span class="why">可观测性 + 缓存</span></div>
+            </div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="recent">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.8rem;">
+          <h2 class="t-heading">最近更新</h2>
+          <a class="section-link" href="#" onclick="go('tools');return false">全部工具 →</a>
+        </div>
+        <div class="recent-grid">
+          <div class="recent-row" onclick="go('inspect')">
+            <div><div class="rr-name">Inspect AI</div><div class="rr-summary">200+ 预构建评估任务，Agent 工作流 + 沙箱隔离</div></div>
+            <div class="badges"><span class="badge badge-high">HIGH</span><span class="badge badge-active">ACTIVE</span></div>
+            <span class="rr-date">06-05</span>
+          </div>
+          <div class="recent-row" onclick="go('detail')">
+            <div><div class="rr-name">lm-evaluation-harness</div><div class="rr-summary">HF 排行榜后端，60+ 标准基准</div></div>
+            <div class="badges"><span class="badge badge-high">HIGH</span><span class="badge badge-active">ACTIVE</span></div>
+            <span class="rr-date">06-05</span>
+          </div>
+          <div class="recent-row">
+            <div><div class="rr-name">Promptfoo</div><div class="rr-summary">开源评估 CLI，已被 OpenAI 收购</div></div>
+            <div class="badges"><span class="badge badge-high">HIGH</span><span class="badge badge-acquired">ACQUIRED</span></div>
+            <span class="rr-date">06-05</span>
+          </div>
+          <div class="recent-row">
+            <div><div class="rr-name">MCP</div><div class="rr-summary">工具/数据连接协议，Anthropic 主导</div></div>
+            <div class="badges"><span class="badge badge-high">HIGH</span><span class="badge badge-active">ACTIVE</span></div>
+            <span class="rr-date">06-05</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TOOLS ═══ -->
+    <div class="page" id="p-tools">
+      <div class="page-head">
+        <h1 class="t-title">工具目录</h1>
+        <p class="t-body">按主题浏览已分析的工具</p>
+      </div>
+      <div class="filters">
+        <button class="filter-chip on">全部</button>
+        <button class="filter-chip">评估体系</button>
+        <button class="filter-chip">Agent 框架</button>
+        <button class="filter-chip">协议</button>
+        <button class="filter-chip">可观测性</button>
+      </div>
+
+      <div class="cat-group">
+        <div class="cat-label">评估体系</div>
+        <div class="cat-tools">
+          <div class="tool-item" onclick="go('detail')">
+            <div>
+              <div class="ti-name">lm-evaluation-harness</div>
+              <div class="ti-desc">Hugging Face 排行榜后端，内置 60+ 标准基准，被数百篇论文引用</div>
+            </div>
+            <div class="ti-meta">
+              <span class="badge badge-high">HIGH</span>
+              <span class="stars-count">★ 12.8k</span>
+            </div>
+          </div>
+          <div class="tool-item" onclick="go('inspect')">
+            <div>
+              <div class="ti-name">Inspect AI</div>
+              <div class="ti-desc">AISI 开发，200+ 预构建任务，Agent 工作流 + Docker/K8s 沙箱</div>
+            </div>
+            <div class="ti-meta">
+              <span class="badge badge-high">HIGH</span>
+            </div>
+          </div>
+          <div class="tool-item">
+            <div>
+              <div class="ti-name">DeepEval</div>
+              <div class="ti-desc">基于 pytest 的 LLM-as-Judge 评估，CI/CD 友好</div>
+            </div>
+            <div class="ti-meta">
+              <span class="badge badge-high">HIGH</span>
+            </div>
+          </div>
+          <div class="tool-item">
+            <div>
+              <div class="ti-name">Promptfoo<span class="badge badge-acquired" style="margin-left:0.4rem;font-size:0.625rem;">ACQUIRED</span></div>
+              <div class="ti-desc">开源 LLM 测试评估 CLI，2026.03 被 OpenAI 收购</div>
+            </div>
+            <div class="ti-meta">
+              <span class="badge badge-high">HIGH</span>
+              <span class="stars-count">★ 21.9k</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-group">
+        <div class="cat-label">Agent 框架</div>
+        <div class="cat-tools">
+          <div class="tool-item">
+            <div>
+              <div class="ti-name">n8n</div>
+              <div class="ti-desc">可视化工作流编排，低代码</div>
+            </div>
+            <div class="ti-meta">
+              <span class="badge badge-medium">MEDIUM</span>
+              <span class="stars-count">★ 189k</span>
+            </div>
+          </div>
+          <div class="tool-item">
+            <div>
+              <div class="ti-name">LangChain</div>
+              <div class="ti-desc">Agent/RAG 生态最大</div>
+            </div>
+            <div class="ti-meta">
+              <span class="badge badge-medium">MEDIUM</span>
+              <span class="stars-count">★ 137k</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DETAIL: Inspect AI ═══ -->
+    <div class="page" id="p-inspect">
+      <a class="back-link" onclick="go('tools')">← 工具目录</a>
+      <div class="detail-head">
+        <h1 class="t-display">Inspect AI</h1>
+        <p class="tagline">英国 AI 安全研究所（AISI）和 Meridian Labs 共同开发的评估框架。200+ 预构建任务，内置 Agent 工作流支持，Docker/K8s 沙箱隔离。</p>
+        <div class="meta-row">
+          <span class="badge badge-high">HIGH</span>
+          <span class="badge badge-active">ACTIVE</span>
+          <span class="meta-tag">评估体系</span>
+          <span class="meta-tag"><a href="https://github.com/UKGovernmentBEIS/inspect_ai" target="_blank">GitHub →</a></span>
+          <span class="meta-tag">agent-评估</span>
+          <span class="meta-tag">安全</span>
+          <span class="meta-tag">沙箱</span>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h2>为什么值得关注</h2>
+        <p>在 LLM 评估工具中，Inspect AI 占据了一个独特的位置：它不仅是评估框架，更是 <strong>Agent 行为的安全测试平台</strong>。当你需要在沙箱环境中验证 Agent 是否会做出危险操作时，这是目前最成熟的选择。</p>
+
+        <div class="insight">
+          <div class="insight-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            关键洞察
+          </div>
+          <p>Inspect AI 的核心价值不在于基准测试数量，而在于它的 <strong>Agent 工作流原生支持</strong>：内置 ReAct 和 Deep Agent，可以桥接 Claude Code、Codex CLI、Gemini CLI，在 Docker/K8s 沙箱中安全执行。</p>
+        </div>
+
+        <h2>核心能力</h2>
+        <ul>
+          <li><strong>200+ 预构建评估任务</strong>，覆盖安全、推理、编码</li>
+          <li><strong>广泛的模型支持</strong>：OpenAI / Anthropic / Google / vLLM / Ollama</li>
+          <li><strong>Agent 原生</strong>：内置 ReAct、Deep Agent，支持多步骤 Agent 工作流评估</li>
+          <li><strong>沙箱隔离</strong>：Docker 和 K8s 原生支持</li>
+        </ul>
+
+        <h2>适用场景</h2>
+      </div>
+
+      <div class="breakout">
+        <div class="comparison">
+          <table>
+            <thead><tr><th>场景</th><th>适合度</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>AI 安全评估</td><td><span class="badge badge-high">最佳</span></td><td>专为安全评估设计，AISI 背书</td></tr>
+              <tr><td>Agent 能力测试</td><td><span class="badge badge-high">最佳</span></td><td>内置 Agent 工作流，沙箱隔离</td></tr>
+              <tr><td>标准学术基准</td><td><span class="badge badge-medium">可用</span></td><td>任务丰富但不如 lm-eval-harness 全面</td></tr>
+              <tr><td>CI/CD 集成</td><td><span class="badge badge-medium">可用</span></td><td>支持但不如 DeepEval 的 pytest 集成顺滑</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="prose">
+        <div class="tip">
+          <div class="tip-label">实践建议</div>
+          <p>不要试图用一个框架覆盖所有评估需求。常见组合：Inspect AI 做 Agent 安全评估 + lm-eval-harness 做标准基准 + DeepEval 做日常 CI 回归。</p>
+        </div>
+
+        <h3>置信度说明</h3>
+        <p>本分析基于官方文档、GitHub 仓库和多个独立源交叉验证，置信度为 <strong>HIGH</strong>。核心能力声明均经主源确认，Agent 桥接功能获 2-1 验证通过。</p>
+      </div>
+    </div>
+
+    <!-- ═══ DETAIL: lm-eval ═══ -->
+    <div class="page" id="p-detail">
+      <a class="back-link" onclick="go('tools')">← 工具目录</a>
+      <div class="detail-head">
+        <h1 class="t-display">lm-evaluation-harness</h1>
+        <p class="tagline">EleutherAI 出品的 LLM 评估框架。Hugging Face Open LLM Leaderboard 的后端引擎，被数百篇学术论文引用的事实标准。</p>
+        <div class="meta-row">
+          <span class="badge badge-high">HIGH</span>
+          <span class="badge badge-active">ACTIVE</span>
+          <span class="meta-tag">评估体系</span>
+          <span class="meta-tag"><a href="https://github.com/EleutherAI/lm-evaluation-harness" target="_blank">GitHub →</a></span>
+          <span class="meta-tag">★ 12.8k</span>
+          <span class="meta-tag">学术标准</span>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h2>为什么是事实标准</h2>
+        <p>如果你在写论文或者做模型排名，绑不开 lm-evaluation-harness。它是 Hugging Face Open LLM Leaderboard 的后端引擎，内置 <strong>60+ 标准基准</strong>（MMLU、HellaSwag、GSM8K、BBH 等）。数百篇论文引用意味着你的评估结果可以直接与已发表的工作对比。</p>
+
+        <div class="insight">
+          <div class="insight-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            关键洞察
+          </div>
+          <p>lm-eval-harness 的真正壁垒不是功能，而是 <strong>生态位</strong>：当整个学术界都用它作为基准，你的评估结果天然具有可比性。这种网络效应让竞争者很难替代它。</p>
+        </div>
+
+        <h2>适用场景</h2>
+      </div>
+
+      <div class="breakout">
+        <div class="comparison">
+          <table>
+            <thead><tr><th>场景</th><th>适合度</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>学术论文基准对比</td><td><span class="badge badge-high">最佳</span></td><td>事实标准，结果可直接比较</td></tr>
+              <tr><td>模型排行榜</td><td><span class="badge badge-high">最佳</span></td><td>HF Leaderboard 后端</td></tr>
+              <tr><td>自定义评估任务</td><td><span class="badge badge-high">最佳</span></td><td>社区任务生态最丰富</td></tr>
+              <tr><td>Agent 评估</td><td><span class="badge badge-low">不适合</span></td><td>面向静态模型，无 Agent 支持</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ REPORT ═══ -->
+    <div class="page" id="p-report">
+      <div class="report-head">
+        <h1 class="t-display">AI Harness 生态系统<br>深度研究报告</h1>
+        <div class="report-meta">
+          <span>2026-06-05</span>
+          <span>对抗验证</span>
+          <span>事实核查</span>
+        </div>
+      </div>
+
+      <div class="report-method">
+        <div class="method-step"><span class="num">22</span> 源抓取</div>
+        <span class="method-arrow">→</span>
+        <div class="method-step"><span class="num">98</span> 声明提取</div>
+        <span class="method-arrow">→</span>
+        <div class="method-step"><span class="num">25</span> 对抗验证</div>
+        <span class="method-arrow">→</span>
+        <div class="method-step" style="border-color:var(--green);"><span class="num" style="color:var(--green)">19</span> 通过</div>
+        <div class="method-step" style="border-color:var(--red);"><span class="num" style="color:var(--red)">6</span> 驳回</div>
+      </div>
+
+      <div class="prose">
+        <p style="font-size:1.0625rem;max-width:60ch;line-height:1.75;"><strong>Harness 质量决定 Agent 能否投产，而非仅模型质量。</strong> Anthropic 2026 年 4 月事后分析揭示，三个独立的 harness 层变更导致了显著质量退化，配置影响可达 5+ 个百分点。</p>
+      </div>
+
+      <div class="sep"></div>
+
+      <h2 class="t-heading" style="margin-bottom:0.8rem;">经验证的核心发现</h2>
+
+      <div class="finding">
+        <div class="finding-head">
+          <span class="finding-claim">LLM 评估框架形成梯队格局：lm-eval-harness 是事实标准（12.8k 星），Promptfoo 已被 OpenAI 收购（21.9k 星），DeepEval 提供 pytest 集成，Inspect AI 由英国安全研究所开发</span>
+          <span class="badge badge-high" style="flex-shrink:0">HIGH</span>
+        </div>
+        <p class="finding-evidence">四个工具均获 3-0 一致通过。lm-eval-harness 内置 60+ 标准基准，被数百篇论文引用。</p>
+        <div class="finding-sources">
+          <span class="source-tag">GitHub 主源</span>
+          <span class="source-tag">官方文档</span>
+          <span class="source-tag">3-0 验证</span>
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head">
+          <span class="finding-claim">AgentOps 作为独立于 MLOps/DevOps 的新范式被提出。Agent 故障是轨迹级和语义级的，传统监控可能完全遗漏</span>
+          <span class="badge badge-high" style="flex-shrink:0">HIGH</span>
+        </div>
+        <p class="finding-evidence">13 位研究者的学术调研：agent failures may be trajectory-level and semantic...all tool calls can return successful status codes。</p>
+        <div class="finding-sources">
+          <span class="source-tag">arxiv 2606.01581v1</span>
+          <span class="source-tag">独立验证</span>
+          <span class="source-tag">3-0 验证</span>
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="finding-head">
+          <span class="finding-claim">Harness 配置可使基准波动 5+ 百分点：Anthropic 4 月事后分析将质量退化追溯至三个独立 harness 层变更</span>
+          <span class="badge badge-medium" style="flex-shrink:0">MEDIUM</span>
+        </div>
+        <p class="finding-evidence">三个根因经多个独立源确认。5+ 百分点数据主源 URL 已 404，事后分析数据支撑其可信度。</p>
+        <div class="finding-sources">
+          <span class="source-tag">Anthropic 事后分析</span>
+          <span class="source-tag">SRE Weekly</span>
+          <span class="source-tag">2-1 验证</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function go(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('p-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (event?.target?.classList?.contains('nav-item')) event.target.classList.add('active');
+  document.querySelector('.main').scrollTop = 0;
+}
+
+function toggleFlow(entry) {
+  const tree = entry.querySelector('.flow-tree');
+  const wasOpen = tree.classList.contains('open');
+
+  document.querySelectorAll('.flow-tree').forEach(t => t.classList.remove('open'));
+  document.querySelectorAll('.flow-entry').forEach(e => e.classList.remove('open'));
+
+  if (!wasOpen) {
+    tree.classList.add('open');
+    entry.classList.add('open');
+  }
+}
+
+document.querySelectorAll('.filter-chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(x => x.classList.remove('on'));
+    c.classList.add('on');
+  });
+});
+</script>
+
+</body>
+</html>

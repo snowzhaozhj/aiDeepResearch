@@ -1,0 +1,192 @@
+---
+import Base from "../layouts/Base.astro";
+import { getCollection } from "astro:content";
+
+const tools = await getCollection("tools");
+const recent = tools.sort((a, b) => b.data.date.getTime() - a.data.date.getTime()).slice(0, 5);
+const base = import.meta.env.BASE_URL;
+---
+
+<Base title="Harness Lab — AI 工具选型指南">
+  <div class="home-intro">
+    <h1 class="t-display">找到适合你的<br />AI Harness 工具</h1>
+    <p class="lead">
+      有观点的技术选型指南。每个结论标注置信度，每个推荐说明适用场景。
+    </p>
+  </div>
+
+  <section class="flow">
+    <h2 class="t-heading">从问题出发</h2>
+    <div class="flow-entries">
+      <details class="flow-entry">
+        <summary>
+          <div class="flow-icon" style="background:var(--green-dim);color:var(--green)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+          </div>
+          <div>
+            <h3>评估 LLM / Agent 质量</h3>
+            <p>基准测试、CI 集成、安全评估、红队测试</p>
+          </div>
+          <span class="flow-arrow">→</span>
+        </summary>
+        <div class="tree-content">
+          <div class="tree-q">学术论文或排行榜对比？</div>
+          <a class="tree-answer" href={`${base}tools/evaluation/lm-eval-harness/`}><span class="name">lm-evaluation-harness</span><span class="why">HF 排行榜后端，60+ 基准</span></a>
+          <div class="tree-q">需要 CI/CD 自动化？</div>
+          <a class="tree-answer" href={`${base}tools/evaluation/deepeval/`}><span class="name">DeepEval</span><span class="why">pytest 集成</span></a>
+          <a class="tree-answer" href={`${base}tools/evaluation/promptfoo/`}><span class="name">Promptfoo</span><span class="why">跨模型对比（已被收购）</span></a>
+          <div class="tree-q">AI 安全 / Agent 行为评估？</div>
+          <a class="tree-answer" href={`${base}tools/evaluation/inspect-ai/`}><span class="name">Inspect AI</span><span class="why">200+ 任务，沙箱隔离</span></a>
+        </div>
+      </details>
+
+      <details class="flow-entry">
+        <summary>
+          <div class="flow-icon" style="background:var(--accent-dim);color:var(--accent)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></svg>
+          </div>
+          <div>
+            <h3>构建 Agent 应用</h3>
+            <p>低代码编排、代码框架、全栈平台</p>
+          </div>
+          <span class="flow-arrow">→</span>
+        </summary>
+        <div class="tree-content">
+          <div class="tree-q">需要可视化 / 低代码？</div>
+          <span class="tree-answer"><span class="name">Dify</span><span class="why">全栈平台，142k 星</span></span>
+          <span class="tree-answer"><span class="name">n8n</span><span class="why">工作流编排，189k 星</span></span>
+          <div class="tree-q">纯代码控制？</div>
+          <span class="tree-answer"><span class="name">LangChain</span><span class="why">最大生态</span></span>
+        </div>
+      </details>
+
+      <details class="flow-entry">
+        <summary>
+          <div class="flow-icon" style="background:var(--purple-dim);color:var(--purple)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+          </div>
+          <div>
+            <h3>监控 Agent 运行</h3>
+            <p>可观测性、语义级故障诊断、成本管理</p>
+          </div>
+          <span class="flow-arrow">→</span>
+        </summary>
+        <div class="tree-content">
+          <div class="tree-q">已有 OpenTelemetry 体系？</div>
+          <a class="tree-answer" href={`${base}tools/observability/langfuse/`}><span class="name">LangFuse</span><span class="why">OTel 原生</span></a>
+          <div class="tree-q">性能敏感？</div>
+          <span class="tree-answer"><span class="name">LangDB</span><span class="why">全 Rust</span></span>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="recent">
+    <div class="recent-header">
+      <h2 class="t-heading">最近更新</h2>
+      <a class="section-link" href={`${base}tools/`}>全部工具 →</a>
+    </div>
+    <div class="recent-grid">
+      {recent.map((tool) => (
+        <a class="recent-row" href={`${base}tools/${tool.id}/`}>
+          <div>
+            <div class="rr-name">{tool.data.name}</div>
+            <div class="rr-summary">{tool.data.summary}</div>
+          </div>
+          <div class="badges">
+            <span class={`badge badge-${tool.data.confidence}`}>{tool.data.confidence.toUpperCase()}</span>
+            <span class={`badge badge-${tool.data.status}`}>{tool.data.status.toUpperCase()}</span>
+          </div>
+          <span class="rr-date">{tool.data.date.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" })}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .home-intro { margin-bottom: 3.5rem; }
+  .home-intro .t-display { margin-bottom: 0.6rem; }
+  .lead {
+    font-size: 1.0625rem;
+    color: var(--ink-2);
+    max-width: 52ch;
+    line-height: 1.65;
+  }
+
+  .flow { margin-bottom: 4rem; }
+  .flow > .t-heading { margin-bottom: 1.2rem; }
+
+  .flow-entry {
+    border-bottom: 1px solid var(--border-dim);
+  }
+  .flow-entry:first-of-type { border-top: 1px solid var(--border-dim); }
+
+  .flow-entry summary {
+    display: grid;
+    grid-template-columns: 3.2rem 1fr auto;
+    align-items: start;
+    gap: 0 1rem;
+    padding: 1.1rem 0;
+    cursor: pointer;
+    list-style: none;
+    transition: background 200ms var(--ease);
+  }
+  .flow-entry summary::-webkit-details-marker { display: none; }
+  .flow-entry summary:hover { background: oklch(0.15 0.01 265 / 0.02); }
+
+  .flow-icon {
+    width: 3.2rem; height: 3.2rem;
+    border-radius: var(--r-lg);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .flow-entry h3 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.1rem; }
+  .flow-entry summary p { font-size: 0.8125rem; color: var(--muted); line-height: 1.4; }
+
+  .flow-arrow {
+    color: var(--muted); font-size: 1rem; padding-top: 0.3rem;
+    transition: transform 200ms var(--ease), color 200ms var(--ease);
+  }
+  .flow-entry summary:hover .flow-arrow { transform: translateX(3px); color: var(--primary); }
+  .flow-entry[open] .flow-arrow { transform: rotate(90deg); color: var(--primary); }
+
+  .tree-content { padding: 0.2rem 0 1rem 4.2rem; }
+  .tree-q {
+    font-size: 0.8125rem; font-weight: 500;
+    color: var(--ink-2); margin-bottom: 0.3rem; padding-top: 0.5rem;
+  }
+  .tree-q:first-child { padding-top: 0; }
+  .tree-answer {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.3rem 0.5rem; margin-left: 0.8rem;
+    border-radius: var(--r); font-size: 0.8125rem;
+    color: inherit; text-decoration: none;
+    transition: background 120ms var(--ease);
+  }
+  .tree-answer:hover { background: var(--primary-dim); text-decoration: none; }
+  .tree-answer .name { font-weight: 600; color: var(--primary); }
+  .tree-answer .why { color: var(--muted); font-size: 0.75rem; }
+
+  .recent { margin-bottom: 3rem; }
+  .recent-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 0.8rem;
+  }
+  .section-link { font-size: 0.8125rem; color: var(--primary); font-weight: 500; }
+
+  .recent-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    align-items: center; gap: 0.6rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    text-decoration: none; color: inherit;
+    transition: background 120ms var(--ease);
+  }
+  .recent-row:first-child { border-top: 1px solid var(--border-dim); }
+  .recent-row:hover { background: oklch(0.15 0.01 265 / 0.02); text-decoration: none; }
+  .rr-name { font-weight: 550; font-size: 0.875rem; color: var(--ink); }
+  .rr-summary { font-size: 0.78rem; color: var(--muted); margin-top: 0.05rem; }
+  .badges { display: flex; gap: 0.3rem; white-space: nowrap; }
+  .rr-date { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>

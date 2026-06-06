@@ -1,0 +1,164 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "Harness Lab" } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href={base}>
+          <div class="brand-mark">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 7L5 3L8 7L11 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M2 11L5 7L8 11L11 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" />
+            </svg>
+          </div>
+          Harness Lab
+        </a>
+      </header>
+
+      <nav class="sidebar">
+        <div class="nav-group">
+          <a class="nav-item" href={base}>首页</a>
+          <a class="nav-item" href={`${base}tools/`}>工具目录</a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">评估体系</div>
+          <a class="nav-item" href={`${base}tools/evaluation/lm-eval-harness/`}><span class="nav-dot" style="background:var(--green)"></span>lm-eval-harness</a>
+          <a class="nav-item" href={`${base}tools/evaluation/inspect-ai/`}><span class="nav-dot" style="background:var(--green)"></span>Inspect AI</a>
+          <a class="nav-item" href={`${base}tools/evaluation/deepeval/`}><span class="nav-dot" style="background:var(--green)"></span>DeepEval</a>
+          <a class="nav-item" href={`${base}tools/evaluation/promptfoo/`}><span class="nav-dot" style="background:var(--orange)"></span>Promptfoo</a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">协议</div>
+          <a class="nav-item" href={`${base}tools/protocols/mcp/`}><span class="nav-dot" style="background:var(--green)"></span>MCP</a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">可观测性</div>
+          <a class="nav-item" href={`${base}tools/observability/langfuse/`}><span class="nav-dot" style="background:var(--purple)"></span>LangFuse</a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">报告</div>
+          <a class="nav-item" href={`${base}reports/ai-harness-ecosystem/`}>生态系统报告</a>
+          <a class="nav-item" href={`${base}reports/knowledge-base-rag-2026/`}>知识库与 RAG</a>
+          <a class="nav-item" href={`${base}reports/knowledge-graph-code-graph-2026/`}>知识图谱与代码图谱</a>
+        </div>
+      </nav>
+
+      <main class="main">
+        <slot />
+      </main>
+    </div>
+
+    <style>
+      .shell {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        grid-template-rows: auto 1fr;
+        min-height: 100dvh;
+      }
+
+      .topbar {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        padding: 0 1.25rem;
+        height: 52px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 0.9375rem;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .brand:hover { text-decoration: none; }
+
+      .brand-mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        background: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        padding: 1rem 0;
+        overflow-y: auto;
+        position: sticky;
+        top: 52px;
+        height: calc(100dvh - 52px);
+        font-size: 0.8125rem;
+      }
+
+      .nav-group { margin-bottom: 1.4rem; }
+
+      .nav-label {
+        padding: 0 1rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin-bottom: 0.2rem;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 1rem;
+        color: var(--ink-2);
+        text-decoration: none;
+        transition: all 120ms var(--ease);
+        font-weight: 400;
+      }
+
+      .nav-item:hover {
+        color: var(--ink);
+        background: oklch(0.15 0.01 265 / 0.04);
+        text-decoration: none;
+      }
+
+      .nav-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        opacity: 0.4;
+        flex-shrink: 0;
+      }
+
+      .main {
+        padding: 2.5rem 3rem 5rem;
+        max-width: 820px;
+        overflow-y: auto;
+      }
+    </style>
+  </body>
+</html>
