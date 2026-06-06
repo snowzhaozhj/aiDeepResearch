@@ -1,0 +1,90 @@
+---
+interface Props {
+  title: string;
+  scores: { label: string; value: number; max?: number }[];
+}
+
+const { title, scores } = Astro.props;
+---
+
+<div class="score-card">
+  <h4 class="sc-title">{title}</h4>
+  <div class="sc-bars">
+    {scores.map((s) => {
+      const max = s.max || 10;
+      const pct = Math.min((s.value / max) * 100, 100);
+      const level = pct >= 70 ? "high" : pct >= 40 ? "mid" : "low";
+      return (
+        <div class="sc-row">
+          <span class="sc-label">{s.label}</span>
+          <div class="sc-track">
+            <div class={`sc-fill sc-${level}`} style={`width: ${pct}%`}></div>
+          </div>
+          <span class="sc-value">{s.value}/{max}</span>
+        </div>
+      );
+    })}
+  </div>
+</div>
+
+<style>
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 1.3rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .sc-title {
+    font-size: 0.875rem;
+    font-weight: 650;
+    color: var(--ink);
+    margin-bottom: 1rem;
+  }
+
+  .sc-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .sc-row {
+    display: grid;
+    grid-template-columns: 6rem 1fr 2.5rem;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .sc-label {
+    font-size: 0.75rem;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sc-track {
+    height: 6px;
+    background: var(--border-dim);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .sc-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 600ms var(--ease);
+  }
+
+  .sc-high { background: var(--green); }
+  .sc-mid { background: var(--orange); }
+  .sc-low { background: var(--red); }
+
+  .sc-value {
+    font-size: 0.6875rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-align: right;
+  }
+</style>

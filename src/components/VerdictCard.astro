@@ -1,0 +1,96 @@
+---
+interface Props {
+  claim: string;
+  verdict: "confirmed" | "rejected" | "partial";
+  votes?: string;
+}
+
+const { claim, verdict, votes } = Astro.props;
+
+const config = {
+  confirmed: { label: "验证通过", color: "--green", icon: "✓" },
+  rejected: { label: "已驳回", color: "--red", icon: "✗" },
+  partial: { label: "部分成立", color: "--orange", icon: "~" },
+};
+
+const { label, color, icon } = config[verdict];
+---
+
+<div class="verdict-card" style={`--vc: var(${color}); --vc-dim: var(${color}-dim);`}>
+  <div class="vc-status">
+    <span class="vc-icon">{icon}</span>
+    <span class="vc-label">{label}</span>
+    {votes && <span class="vc-votes">{votes}</span>}
+  </div>
+  <p class="vc-claim">{claim}</p>
+  <div class="vc-detail">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .verdict-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 1.3rem 1.5rem;
+    margin: 1.2rem 0;
+    transition: border-color 200ms var(--ease);
+  }
+
+  .verdict-card:hover {
+    border-color: oklch(from var(--vc) l c h / 0.35);
+  }
+
+  .vc-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .vc-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--vc-dim);
+    color: var(--vc);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .vc-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--vc);
+    letter-spacing: 0.01em;
+  }
+
+  .vc-votes {
+    font-size: 0.6875rem;
+    color: var(--muted);
+    margin-left: auto;
+    font-family: var(--mono);
+  }
+
+  .vc-claim {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+  }
+
+  .vc-detail {
+    font-size: 0.875rem;
+    color: var(--ink-2);
+    line-height: 1.65;
+  }
+
+  .vc-detail :global(p) {
+    margin: 0;
+  }
+</style>

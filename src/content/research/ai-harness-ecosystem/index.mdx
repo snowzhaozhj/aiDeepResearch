@@ -1,0 +1,224 @@
+---
+title: "AI Harness 生态系统深度研究"
+date: 2026-06-05
+summary: "系统性分析 AI 开发生态中的评估框架、Agent 框架、协议、可观测性平台等 harness 工具，覆盖选型决策、对比分析和被驳回的声明。"
+tags: ["评估框架", "Agent框架", "协议", "可观测性", "工具选型"]
+method: "5 角度并行搜索、22 源抓取、98 条声明提取、25 条对抗验证（19 通过，6 驳回）"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import Timeline from '@components/Timeline.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  5 角度并行搜索、22 源抓取、98 条声明提取、25 条三票制对抗验证
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  Harness 质量决定 Agent 能否投产，而非仅模型质量。Anthropic 2026 年 4 月事后分析揭示，三个独立的 harness 层变更导致了显著质量退化：reasoning-effort 从 high 降至 medium、缓存 bug 导致推理历史每轮清除、系统提示词变更导致 3% 性能下降。harness 配置对最终效果的影响可达 5+ 个百分点。
+</KeyFinding>
+
+---
+
+## 一、评估与基准测试体系
+
+四个工具形成明确梯队，均获 3-0 一致验证通过。
+
+### lm-evaluation-harness — 学术事实标准
+
+- **定位**：Hugging Face Open LLM Leaderboard 后端，被数百篇论文引用
+- **能力**：内置 60+ 标准基准（MMLU、HellaSwag、GSM8K、BBH 等），支持自定义任务
+- **规模**：12.8k 星 / 3.3k forks
+- **适用**：学术研究、模型排名、标准化基准对比
+- **源**：[GitHub](https://github.com/EleutherAI/lm-evaluation-harness)
+
+### Inspect AI — 前沿安全评估
+
+- **定位**：英国 AI 安全研究所（AISI）和 Meridian Labs 共同开发
+- **能力**：200+ 预构建评估任务，内置 ReAct / Deep Agent 支持 Agent 工作流，可桥接 Claude Code / Codex CLI / Gemini CLI，支持 Docker/K8s 沙箱
+- **模型覆盖**：OpenAI / Anthropic / Google / vLLM / Ollama
+- **适用**：AI 安全评估、Agent 能力测试、需要沙箱隔离的评估场景
+- **源**：[GitHub](https://github.com/UKGovernmentBEIS/inspect_ai)
+
+### DeepEval — 开发者友好的 pytest 集成
+
+- **定位**：将 LLM 评估嵌入 pytest 工作流，assert_test 范式
+- **能力**：几乎所有内置指标为 LLM-as-Judge 类型，分数 0-1 可配置阈值
+
+<Callout type="warning" title="成本提示">
+  需要 API 密钥（依赖外部 LLM 做评判），有成本和延迟开销
+</Callout>
+
+- **适用**：CI/CD 集成、团队已有 pytest 习惯的场景
+- **源**：[官方文档](https://deepeval.com/docs/getting-started)
+
+### Promptfoo — 已被 OpenAI 收购
+
+- **定位**：开源 LLM 测试与评估 CLI 工具，21.9k 星
+- **变化**：2026 年 3 月被 OpenAI 收购
+- **风险**：收购后开源策略和多模型中立性存疑
+- **源**：[官方文档](https://www.promptfoo.dev/docs/intro/)
+
+### 选型建议
+
+<ComparisonMatrix
+  headers={["场景", "推荐工具", "核心理由"]}
+  rows={[
+    { "场景": "学术论文、标准排名", "推荐工具": "lm-evaluation-harness", "核心理由": "事实标准，论文可引用" },
+    { "场景": "AI 安全、Agent 沙箱评估", "推荐工具": "Inspect AI", "核心理由": "官方背景，沙箱原生" },
+    { "场景": "工程团队 CI/CD 集成", "推荐工具": "DeepEval", "核心理由": "pytest 原生，阈值断言" },
+    { "场景": "快速原型红队测试", "推荐工具": "Promptfoo", "核心理由": "上手快，但注意收购风险" },
+  ]}
+  highlight="AI 安全、Agent 沙箱评估"
+/>
+
+---
+
+## 二、Agent 框架与编排
+
+### 流行度 Top 5（2026 年 6 月快照）
+
+<ComparisonMatrix
+  headers={["排名", "框架", "星标", "核心特点"]}
+  rows={[
+    { "排名": "1", "框架": "n8n", "星标": "~189k", "核心特点": "可视化工作流编排，低代码" },
+    { "排名": "2", "框架": "AutoGPT", "星标": "~184k", "核心特点": "自主 Agent 先驱" },
+    { "排名": "3", "框架": "langflow", "星标": "~148k", "核心特点": "LangChain 可视化编排" },
+    { "排名": "4", "框架": "Dify", "星标": "~142k", "核心特点": "全栈 LLM 应用开发平台" },
+    { "排名": "5", "框架": "LangChain", "星标": "~137k", "核心特点": "Agent/RAG 生态最大" },
+  ]}
+/>
+
+### 关键洞察：流行度与流程完备性正交
+
+<KeyFinding level="medium">
+  星标数不反映工程质量。Macedo 2026 论文对框架进行六维度评估，发现仅 85 星的 Spec-Flow 获 11/12 最高分，远超大多数万星项目。
+</KeyFinding>
+
+<ScoreCard
+  title="框架工程完备性评分（Macedo 2026）"
+  scores={[
+    { label: "Spec-Flow", value: 11, max: 12 },
+    { label: "BMAD Method", value: 10, max: 12 },
+    { label: "LangChain", value: 7, max: 12 },
+    { label: "AutoGPT", value: 5, max: 12 },
+  ]}
+/>
+
+<Callout type="warning" title="置信度标注">
+  该论文为未经同行评审的 arxiv 预印本，单一评分者。
+</Callout>
+
+---
+
+## 三、Harness 工程体系化
+
+[awesome-harness-engineering](https://github.com/ai-boost/awesome-harness-engineering) 将 harness 工程体系化为 12 个设计原语：
+
+<ComparisonMatrix
+  headers={["原语", "职责", "关键工具示例"]}
+  rows={[
+    { "原语": "Agent Loop", "职责": "核心执行循环", "关键工具示例": "Claude Code, Codex CLI" },
+    { "原语": "Planning", "职责": "任务分解与规划", "关键工具示例": "BMAD, Spec-Flow" },
+    { "原语": "Context Delivery", "职责": "上下文管理与注入", "关键工具示例": "RAG, CLAUDE.md" },
+    { "原语": "Tool Design", "职责": "工具接口设计", "关键工具示例": "Function Calling" },
+    { "原语": "Skills/MCP", "职责": "能力扩展协议", "关键工具示例": "MCP Servers" },
+    { "原语": "Permissions", "职责": "权限与安全边界", "关键工具示例": "Sandbox, Docker" },
+    { "原语": "Memory", "职责": "长期记忆与状态", "关键工具示例": "Vector DB, KG" },
+    { "原语": "Verification", "职责": "输出校验与评估", "关键工具示例": "LLM-as-Judge" },
+    { "原语": "Observability", "职责": "可观测性", "关键工具示例": "LangFuse, Helicone" },
+  ]}
+/>
+
+追踪资源：
+- [best-of-Agent-Harnesses](https://github.com/RyanAlberts/best-of-Agent-Harnesses)：101 个项目，9 大类别，每周更新
+- [awesome-ai-agents-2026](https://github.com/ARUNAGIRINATHAN-K/awesome-ai-agents-2026)：431 个条目，32 个分类
+
+---
+
+## 四、AgentOps — 新兴运维范式
+
+<KeyFinding level="medium">
+  Agent 故障是轨迹级和语义级的，传统监控可能完全遗漏。所有 tool calls 都可能返回成功状态码，但 Agent 行为已经偏离目标。
+</KeyFinding>
+
+代表性平台：
+
+<ComparisonMatrix
+  headers={["平台", "差异化特点", "技术栈"]}
+  rows={[
+    { "平台": "LangFuse", "差异化特点": "OpenTelemetry 原生集成", "技术栈": "TypeScript" },
+    { "平台": "LangDB", "差异化特点": "全 Rust 高性能", "技术栈": "Rust" },
+    { "平台": "Helicone", "差异化特点": "可观测性 + 缓存管理", "技术栈": "TypeScript" },
+  ]}
+/>
+
+---
+
+## 五、互操作协议全景
+
+<Timeline
+  events={[
+    { date: "2024-11", title: "MCP 发布", detail: "Anthropic 推出 Model Context Protocol，工具/数据连接标准", type: "highlight" },
+    { date: "2025-04", title: "A2A 发布", detail: "Google 推出 Agent-to-Agent 协议，代理间路由", type: "highlight" },
+    { date: "2025-H2", title: "UCP / AP2 出现", detail: "商务工作流和支付授权协议" },
+    { date: "2026-Q1", title: "A2UI / AG-UI 发布", detail: "代理驱动 UI 和流式事件格式协议" },
+    { date: "2026 路线图", title: "MCP 扩展计划", detail: "水平扩展传输、.well-known 发现、Tasks 原语（含重试/过期语义）、企业扩展（审计/SSO/网关）", type: "highlight" },
+  ]}
+/>
+
+---
+
+## 六、被驳回的声明
+
+以下声明经对抗验证被驳回，反映了 harness 领域效果夸大的倾向：
+
+<VerdictCard claim="LangChain 编码代理仅通过 harness 调优从第 30 名升至前 5" verdict="rejected" votes="0/3">
+  无法从主源验证该定量声明，原始出处未提供可复现数据。
+</VerdictCard>
+
+<VerdictCard claim="Statewright 使本地模型在 SWE-bench 上从 2/10 升至 10/10" verdict="rejected" votes="0/3">
+  定量声明不可追溯，缺乏实验环境和模型版本信息。
+</VerdictCard>
+
+<VerdictCard claim="Agent 协议形成 MCP/A2A/ACP 三足鼎立格局" verdict="rejected" votes="0/3">
+  过度简化。实际存在 6+ 协议（MCP、A2A、UCP、AP2、A2UI、AG-UI），且各协议解决的问题层面不同，不构成直接竞争关系。
+</VerdictCard>
+
+<VerdictCard claim="SWE-Agent 成功率低于 40%" verdict="partial" votes="1/3">
+  数据点可能过时或引用了特定版本。不同 benchmark 子集和模型组合下差异显著。
+</VerdictCard>
+
+---
+
+## 待深入方向
+
+1. 评估框架横向对比：生产环境性能开销和集成复杂度尚缺横向基准
+2. MCP Tasks 原语落地时间：决定能否升级为生产级通信基础设施
+3. Promptfoo 收购后走向：开源策略和多模型中立性变化
+4. 中文生态覆盖不足：Dify、langflow 等在学术评估论文中完全缺席
+
+---
+
+## 来源索引
+
+<ComparisonMatrix
+  headers={["来源", "类型"]}
+  rows={[
+    { "来源": "lm-evaluation-harness (GitHub)", "类型": "主源" },
+    { "来源": "Inspect AI (GitHub)", "类型": "主源" },
+    { "来源": "DeepEval (官方文档)", "类型": "主源" },
+    { "来源": "Promptfoo (官方文档)", "类型": "主源" },
+    { "来源": "awesome-harness-engineering", "类型": "聚合" },
+    { "来源": "best-of-Agent-Harnesses", "类型": "聚合" },
+    { "来源": "Macedo 2026 框架评估 (arxiv)", "类型": "论文" },
+    { "来源": "AgentOps 调研 (arxiv)", "类型": "论文" },
+    { "来源": "MCP 官方博客", "类型": "主源" },
+    { "来源": "Anthropic 事后分析", "类型": "主源" },
+  ]}
+/>

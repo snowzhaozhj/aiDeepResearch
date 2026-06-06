@@ -1,0 +1,61 @@
+---
+interface Props {
+  type?: "insight" | "warning" | "tip" | "note";
+  title?: string;
+}
+
+const { type = "note", title } = Astro.props;
+
+const config = {
+  insight: { color: "--primary", defaultTitle: "洞察" },
+  warning: { color: "--orange", defaultTitle: "注意" },
+  tip: { color: "--green", defaultTitle: "建议" },
+  note: { color: "--accent", defaultTitle: "备注" },
+};
+
+const { color, defaultTitle } = config[type];
+const displayTitle = title || defaultTitle;
+---
+
+<aside class="callout" style={`--cc: var(${color});`}>
+  <div class="callout-header">
+    <span class="callout-title">{displayTitle}</span>
+  </div>
+  <div class="callout-body">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .callout {
+    background: oklch(from var(--cc) l c h / 0.06);
+    border: 1px solid oklch(from var(--cc) l c h / 0.18);
+    border-radius: var(--r-lg);
+    padding: 1.1rem 1.4rem;
+    margin: 1.5rem 0;
+  }
+
+  .callout-header {
+    margin-bottom: 0.4rem;
+  }
+
+  .callout-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cc);
+    letter-spacing: 0.02em;
+  }
+
+  .callout-body {
+    font-size: 0.9375rem;
+    color: var(--ink-2);
+    line-height: 1.7;
+  }
+
+  .callout-body :global(p) {
+    margin: 0 0 0.5rem;
+  }
+  .callout-body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>

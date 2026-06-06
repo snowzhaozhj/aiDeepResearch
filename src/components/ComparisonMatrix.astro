@@ -1,0 +1,93 @@
+---
+interface Props {
+  headers: string[];
+  rows: Record<string, string>[];
+  highlight?: string;
+}
+
+const { headers, rows, highlight } = Astro.props;
+---
+
+<div class="matrix-wrap">
+  <div class="matrix-scroll">
+    <table class="matrix">
+      <thead>
+        <tr>
+          {headers.map((h) => (
+            <th>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr class={highlight && row[headers[0]] === highlight ? "row-highlight" : ""}>
+            {headers.map((h, i) => (
+              <td class={i === 0 ? "cell-name" : ""}>{row[h]}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .matrix-wrap {
+    margin: 1.8rem 0;
+    max-width: 96ch;
+  }
+
+  .matrix-scroll {
+    overflow-x: auto;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+  }
+
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .matrix th {
+    text-align: left;
+    padding: 0.8rem 1rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .matrix td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-dim);
+    vertical-align: top;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  .matrix tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .matrix tbody tr:hover td {
+    background: var(--surface);
+  }
+
+  .cell-name {
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .row-highlight td {
+    background: var(--primary-dim) !important;
+  }
+  .row-highlight .cell-name {
+    color: var(--primary);
+  }
+</style>

@@ -1,0 +1,63 @@
+---
+interface Props {
+  level?: "high" | "medium" | "low";
+}
+
+const { level = "high" } = Astro.props;
+const colorVar = level === "high" ? "--green" : level === "medium" ? "--orange" : "--red";
+---
+
+<aside class="key-finding" style={`--c: var(${colorVar}); --c-dim: var(${colorVar}-dim);`}>
+  <div class="kf-header">
+    <span class="kf-dot"></span>
+    <span class="kf-label">核心发现 · 置信度 {level}</span>
+  </div>
+  <div class="kf-body">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .key-finding {
+    background: oklch(from var(--c) l c h / 0.06);
+    border: 1px solid oklch(from var(--c) l c h / 0.18);
+    border-radius: var(--r-lg);
+    padding: 1.4rem 1.6rem;
+    margin: 2rem 0;
+    position: relative;
+  }
+
+  .kf-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .kf-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c);
+    box-shadow: 0 0 10px var(--c-dim);
+  }
+
+  .kf-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+
+  .kf-body {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .kf-body :global(p) {
+    margin: 0;
+  }
+</style>
