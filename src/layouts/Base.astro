@@ -1,12 +1,15 @@
 ---
 import "../styles/global.css";
+import { getCollection } from "astro:content";
 
 interface Props {
   title?: string;
 }
 
-const { title = "Harness Lab" } = Astro.props;
+const { title = "AI Deep Research" } = Astro.props;
 const base = import.meta.env.BASE_URL;
+const research = await getCollection("research");
+const sorted = research.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 ---
 
 <html lang="zh-CN">
@@ -26,35 +29,22 @@ const base = import.meta.env.BASE_URL;
               <path d="M2 11L5 7L8 11L11 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" />
             </svg>
           </div>
-          Harness Lab
+          AI Deep Research
         </a>
       </header>
 
       <nav class="sidebar">
         <div class="nav-group">
           <a class="nav-item" href={base}>首页</a>
-          <a class="nav-item" href={`${base}tools/`}>工具目录</a>
         </div>
         <div class="nav-group">
-          <div class="nav-label">评估体系</div>
-          <a class="nav-item" href={`${base}tools/evaluation/lm-eval-harness/`}><span class="nav-dot" style="background:var(--green)"></span>lm-eval-harness</a>
-          <a class="nav-item" href={`${base}tools/evaluation/inspect-ai/`}><span class="nav-dot" style="background:var(--green)"></span>Inspect AI</a>
-          <a class="nav-item" href={`${base}tools/evaluation/deepeval/`}><span class="nav-dot" style="background:var(--green)"></span>DeepEval</a>
-          <a class="nav-item" href={`${base}tools/evaluation/promptfoo/`}><span class="nav-dot" style="background:var(--orange)"></span>Promptfoo</a>
-        </div>
-        <div class="nav-group">
-          <div class="nav-label">协议</div>
-          <a class="nav-item" href={`${base}tools/protocols/mcp/`}><span class="nav-dot" style="background:var(--green)"></span>MCP</a>
-        </div>
-        <div class="nav-group">
-          <div class="nav-label">可观测性</div>
-          <a class="nav-item" href={`${base}tools/observability/langfuse/`}><span class="nav-dot" style="background:var(--purple)"></span>LangFuse</a>
-        </div>
-        <div class="nav-group">
-          <div class="nav-label">报告</div>
-          <a class="nav-item" href={`${base}reports/ai-harness-ecosystem/`}>生态系统报告</a>
-          <a class="nav-item" href={`${base}reports/knowledge-base-rag-2026/`}>知识库与 RAG</a>
-          <a class="nav-item" href={`${base}reports/knowledge-graph-code-graph-2026/`}>知识图谱与代码图谱</a>
+          <div class="nav-label">研究项目</div>
+          {sorted.map((item) => (
+            <a class="nav-item" href={`${base}research/${item.id}/`}>
+              <span class="nav-dot" style={`background:var(--${item.data.confidence === 'high' ? 'green' : item.data.confidence === 'medium' ? 'orange' : 'red'})`}></span>
+              {item.data.title.length > 20 ? item.data.title.slice(0, 20) + '...' : item.data.title}
+            </a>
+          ))}
         </div>
       </nav>
 
@@ -97,13 +87,9 @@ const base = import.meta.env.BASE_URL;
       .brand:hover { text-decoration: none; }
 
       .brand-mark {
-        width: 22px;
-        height: 22px;
-        border-radius: 5px;
+        width: 22px; height: 22px; border-radius: 5px;
         background: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
       }
 
       .sidebar {
@@ -130,9 +116,7 @@ const base = import.meta.env.BASE_URL;
       }
 
       .nav-item {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
+        display: flex; align-items: center; gap: 0.4rem;
         padding: 0.3rem 1rem;
         color: var(--ink-2);
         text-decoration: none;
@@ -147,10 +131,9 @@ const base = import.meta.env.BASE_URL;
       }
 
       .nav-dot {
-        width: 5px;
-        height: 5px;
+        width: 5px; height: 5px;
         border-radius: 50%;
-        opacity: 0.4;
+        opacity: 0.5;
         flex-shrink: 0;
       }
 

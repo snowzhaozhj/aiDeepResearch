@@ -1,0 +1,61 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getCollection, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const research = await getCollection("research");
+  return research.map((item) => ({
+    params: { slug: item.id },
+    props: { item },
+  }));
+}
+
+const base = import.meta.env.BASE_URL;
+const { item } = Astro.props;
+const { Content } = await render(item);
+---
+
+<Base title={`${item.data.title} — AI Deep Research`}>
+  <a class="back-link" href={base}>← 全部研究</a>
+
+  <div class="detail-head">
+    <h1 class="t-display">{item.data.title}</h1>
+    <p class="tagline">{item.data.summary}</p>
+    <div class="meta-row">
+      <span class={`badge badge-${item.data.confidence}`}>{item.data.confidence.toUpperCase()}</span>
+      <span class="meta-tag">{item.data.date.toLocaleDateString("zh-CN")}</span>
+      {item.data.method && <span class="meta-tag">{item.data.method}</span>}
+      {item.data.tags.map((tag) => (
+        <span class="meta-tag">{tag}</span>
+      ))}
+    </div>
+  </div>
+
+  <div class="prose">
+    <Content />
+  </div>
+</Base>
+
+<style>
+  .back-link {
+    font-size: 0.8125rem; color: var(--muted);
+    margin-bottom: 2rem; display: inline-flex;
+    align-items: center; gap: 0.3rem;
+    transition: color 150ms var(--ease);
+  }
+  .back-link:hover { color: var(--primary); text-decoration: none; }
+
+  .detail-head { margin-bottom: 3rem; }
+  .detail-head .t-display { margin-bottom: 0.5rem; }
+  .tagline {
+    font-size: 1rem; color: var(--ink-2);
+    max-width: 62ch; line-height: 1.65; margin-bottom: 1rem;
+  }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .meta-tag {
+    display: inline-flex; align-items: center;
+    padding: 0.2rem 0.5rem; border-radius: 20px;
+    font-size: 0.75rem; background: var(--surface);
+    color: var(--muted); border: 1px solid var(--border);
+  }
+</style>
