@@ -8,39 +8,40 @@
 }
 
 :root {
-  --bg: oklch(1 0 0);
-  --surface: oklch(0.975 0.002 265);
-  --surface-2: oklch(0.955 0.004 265);
-  --border: oklch(0.91 0.006 265);
-  --border-dim: oklch(0.94 0.004 265);
+  --bg: oklch(0.13 0.015 350);
+  --surface: oklch(0.17 0.012 350);
+  --surface-2: oklch(0.21 0.010 350);
+  --border: oklch(0.26 0.012 350);
+  --border-dim: oklch(0.21 0.008 350);
 
-  --ink: oklch(0.15 0.01 265);
-  --ink-2: oklch(0.3 0.01 265);
-  --muted: oklch(0.49 0.008 265);
+  --ink: oklch(0.93 0.008 80);
+  --ink-2: oklch(0.72 0.008 80);
+  --muted: oklch(0.52 0.006 80);
 
-  --primary: oklch(0.52 0.17 357);
-  --primary-dim: oklch(0.52 0.17 357 / 0.08);
-  --primary-bg: oklch(0.96 0.015 357);
+  --primary: oklch(0.68 0.22 357);
+  --primary-dim: oklch(0.68 0.22 357 / 0.15);
+  --primary-bg: oklch(0.18 0.04 357);
+  --primary-glow: oklch(0.68 0.22 357 / 0.25);
 
-  --accent: oklch(0.42 0.11 230);
-  --accent-dim: oklch(0.42 0.11 230 / 0.07);
+  --accent: oklch(0.72 0.10 200);
+  --accent-dim: oklch(0.72 0.10 200 / 0.12);
 
-  --green: oklch(0.48 0.14 155);
-  --green-dim: oklch(0.48 0.14 155 / 0.09);
-  --orange: oklch(0.55 0.14 55);
-  --orange-dim: oklch(0.55 0.14 55 / 0.09);
-  --red: oklch(0.5 0.16 25);
-  --red-dim: oklch(0.5 0.16 25 / 0.08);
-  --purple: oklch(0.48 0.15 300);
-  --purple-dim: oklch(0.48 0.15 300 / 0.08);
+  --green: oklch(0.72 0.16 155);
+  --green-dim: oklch(0.72 0.16 155 / 0.12);
+  --orange: oklch(0.74 0.14 65);
+  --orange-dim: oklch(0.74 0.14 65 / 0.12);
+  --red: oklch(0.68 0.17 25);
+  --red-dim: oklch(0.68 0.17 25 / 0.10);
+  --purple: oklch(0.70 0.15 300);
+  --purple-dim: oklch(0.70 0.15 300 / 0.10);
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --r: 6px;
-  --r-lg: 10px;
+  --r: 8px;
+  --r-lg: 12px;
 
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
     "Noto Sans SC", sans-serif;
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 * {
@@ -49,72 +50,78 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--ink);
-  font-size: 0.9375rem;
-  line-height: 1.75;
+  font-size: 1rem;
+  line-height: 1.8;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
   color: var(--primary);
   text-decoration: none;
+  transition: color 150ms var(--ease);
 }
 a:hover {
-  text-decoration: underline;
+  color: oklch(0.78 0.20 357);
 }
 
 ::selection {
   background: var(--primary-dim);
+  color: var(--ink);
 }
 
-/* ── Typography scale ── */
+/* ── Typography ── */
 .t-display {
-  font-size: 2rem;
+  font-size: 2.75rem;
   font-weight: 800;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
   color: var(--ink);
   text-wrap: balance;
 }
 
 .t-title {
-  font-size: 1.5rem;
+  font-size: 1.875rem;
   font-weight: 750;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.2;
   color: var(--ink);
   text-wrap: balance;
 }
 
 .t-heading {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   line-height: 1.3;
   color: var(--ink);
 }
 
 .t-body {
-  font-size: 0.9375rem;
-  line-height: 1.75;
+  font-size: 1rem;
+  line-height: 1.8;
   color: var(--ink);
-  max-width: 68ch;
+  max-width: 72ch;
 }
 
 .t-small {
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--ink-2);
 }
 
 .t-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
   color: var(--muted);
 }
 
@@ -122,10 +129,10 @@ a:hover {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.12rem 0.45rem;
-  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
   font-size: 0.6875rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -161,116 +168,202 @@ a:hover {
 
 /* ── Prose ── */
 .prose {
-  max-width: 68ch;
+  max-width: 72ch;
 }
 .prose h2 {
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
-  letter-spacing: -0.015em;
-  margin-top: 3rem;
-  margin-bottom: 0.7rem;
+  letter-spacing: -0.02em;
+  margin-top: 3.5rem;
+  margin-bottom: 0.8rem;
   color: var(--ink);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-dim);
 }
 .prose h3 {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 650;
-  margin-top: 2rem;
+  margin-top: 2.2rem;
   margin-bottom: 0.5rem;
+  color: var(--ink);
+}
+.prose h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.4rem;
+  color: var(--ink-2);
 }
 .prose p {
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
   line-height: 1.8;
+  color: var(--ink-2);
 }
 .prose ul,
 .prose ol {
-  padding-left: 1.2rem;
-  margin-bottom: 1rem;
+  padding-left: 1.3rem;
+  margin-bottom: 1.1rem;
 }
 .prose li {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
   line-height: 1.7;
+  color: var(--ink-2);
+}
+.prose li::marker {
+  color: var(--muted);
 }
 .prose strong {
   font-weight: 650;
   color: var(--ink);
 }
+.prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: oklch(0.68 0.22 357 / 0.3);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms var(--ease);
+}
+.prose a:hover {
+  text-decoration-color: var(--primary);
+}
+.prose code {
+  font-family: var(--mono);
+  font-size: 0.875em;
+  background: var(--surface);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  color: var(--accent);
+}
+.prose pre {
+  background: var(--surface);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--r);
+  padding: 1.2rem 1.4rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.prose pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--ink-2);
+}
+.prose blockquote {
+  border-left: 3px solid var(--primary);
+  padding: 0.8rem 1.2rem;
+  margin: 1.5rem 0;
+  background: var(--primary-bg);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.prose blockquote p {
+  color: var(--ink-2);
+  margin-bottom: 0;
+}
+.prose hr {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 3rem 0;
+}
 
 /* ── Callouts ── */
 .insight {
   background: var(--primary-bg);
-  border: 1px solid oklch(0.52 0.17 357 / 0.12);
+  border: 1px solid oklch(0.68 0.22 357 / 0.2);
   border-radius: var(--r-lg);
-  padding: 1.1rem 1.3rem;
-  margin: 1.5rem 0;
+  padding: 1.2rem 1.4rem;
+  margin: 1.8rem 0;
 }
 .insight-label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   color: var(--primary);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 .insight p {
   margin-bottom: 0;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--ink-2);
 }
 
 .tip {
-  background: oklch(0.48 0.14 155 / 0.06);
-  border: 1px solid oklch(0.48 0.14 155 / 0.12);
+  background: oklch(0.72 0.16 155 / 0.06);
+  border: 1px solid oklch(0.72 0.16 155 / 0.15);
   border-radius: var(--r-lg);
-  padding: 1.1rem 1.3rem;
-  margin: 1.5rem 0;
+  padding: 1.2rem 1.4rem;
+  margin: 1.8rem 0;
 }
 .tip-label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   color: var(--green);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
 }
 .tip p {
   margin-bottom: 0;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--ink-2);
 }
 
 /* ── Breakout ── */
 .breakout {
-  max-width: 90ch;
-  margin: 1.5rem 0;
+  max-width: 96ch;
+  margin: 1.8rem 0;
 }
 
 /* ── Comparison table ── */
 .comparison table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 .comparison th {
   text-align: left;
-  padding: 0.55rem 0.8rem;
-  font-size: 0.6875rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: var(--muted);
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 2px solid var(--border);
+  background: var(--surface);
 }
 .comparison td {
-  padding: 0.6rem 0.8rem;
+  padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--border-dim);
   vertical-align: top;
   color: var(--ink-2);
 }
 .comparison tr:hover td {
-  background: oklch(0.15 0.01 265 / 0.02);
+  background: var(--surface);
+}
+
+/* ── Confidence indicator (inline glow dot) ── */
+.confidence-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+.confidence-dot-high {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green-dim);
+}
+.confidence-dot-medium {
+  background: var(--orange);
+  box-shadow: 0 0 6px var(--orange-dim);
+}
+.confidence-dot-low {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red-dim);
 }

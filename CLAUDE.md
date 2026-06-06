@@ -73,7 +73,8 @@ confidence: "high"
 
 ## 设计系统
 
-- 亮色主题，纯白背景，玫瑰红主色（oklch hue 357°）
+- 暗色主题（深暖黑底 oklch 0.13），玫瑰红主色（oklch hue 357°, 高明度发光感）
+- 去掉侧边栏，采用极简顶部导航 + 全宽内容区布局
 - 设计 token 定义在 `src/styles/global.css` 的 `:root`
 - 详细设计规范见 `DESIGN.md` 和 `PRODUCT.md`
 

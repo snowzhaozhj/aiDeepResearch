@@ -8,30 +8,46 @@ const base = import.meta.env.BASE_URL;
 ---
 
 <Base title="AI Deep Research">
-  <div class="home-intro">
-    <h1 class="t-display">AI Deep Research</h1>
-    <p class="lead">
-      系统性的深度研究，有观点的技术分析。每个结论经过对抗验证，每个推荐标注置信度。
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <span class="pulse"></span>
+      独立研究 · 对抗验证
+    </div>
+    <h1 class="hero-title">
+      AI 工具生态<br /><span class="hero-accent">深度研究</span>
+    </h1>
+    <p class="hero-desc">
+      系统性分析，不做无立场的功能罗列。每个结论经过多源对抗验证，每个推荐标注置信度和依据。
     </p>
-  </div>
+  </section>
 
-  <section class="research-list">
-    <h2 class="t-heading">研究项目</h2>
-    <div class="entries">
-      {sorted.map((item) => (
-        <a class="entry" href={`${base}research/${item.id}/`}>
-          <div class="entry-date">
-            {item.data.date.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" })}
+  <section class="research-section">
+    <div class="section-header">
+      <h2 class="t-heading">研究项目</h2>
+      <span class="section-count">{sorted.length} 篇</span>
+    </div>
+
+    <div class="research-grid">
+      {sorted.map((item, i) => (
+        <a class="card" href={`${base}research/${item.id}/`} style={`--delay: ${i * 60}ms`}>
+          <div class="card-top">
+            <span class={`confidence-indicator ci-${item.data.confidence}`}>
+              <span class="ci-dot"></span>
+              {item.data.confidence}
+            </span>
+            <time class="card-date">
+              {item.data.date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+            </time>
           </div>
-          <div class="entry-body">
-            <h3 class="entry-title">{item.data.title}</h3>
-            <p class="entry-summary">{item.data.summary}</p>
-            <div class="entry-tags">
-              {item.data.tags.map((tag) => (
-                <span class="tag">{tag}</span>
-              ))}
-              <span class={`badge badge-${item.data.confidence}`}>{item.data.confidence.toUpperCase()}</span>
-            </div>
+          <h3 class="card-title">{item.data.title}</h3>
+          <p class="card-summary">{item.data.summary}</p>
+          <div class="card-tags">
+            {item.data.tags.slice(0, 3).map((tag) => (
+              <span class="card-tag">{tag}</span>
+            ))}
+          </div>
+          <div class="card-method">
+            {item.data.method && <span class="method-text">{item.data.method}</span>}
           </div>
         </a>
       ))}
@@ -40,67 +56,195 @@ const base = import.meta.env.BASE_URL;
 </Base>
 
 <style>
-  .home-intro { margin-bottom: 3rem; }
-  .home-intro .t-display { margin-bottom: 0.5rem; }
-  .lead {
-    font-size: 1.0625rem;
+  .hero {
+    padding: 2rem 0 4rem;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--primary);
+    margin-bottom: 1.2rem;
+    letter-spacing: 0.01em;
+  }
+
+  .pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 var(--primary-glow); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  .hero-title {
+    font-size: 3.25rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+    color: var(--ink);
+    margin-bottom: 1rem;
+  }
+
+  .hero-accent {
+    color: var(--primary);
+  }
+
+  .hero-desc {
+    font-size: 1.125rem;
     color: var(--ink-2);
-    max-width: 55ch;
-    line-height: 1.65;
+    max-width: 48ch;
+    line-height: 1.7;
   }
 
-  .research-list .t-heading { margin-bottom: 1.2rem; }
-
-  .entries { display: flex; flex-direction: column; }
-
-  .entry {
-    display: grid;
-    grid-template-columns: 7rem 1fr;
-    gap: 1.5rem;
-    padding: 1.3rem 0;
-    border-bottom: 1px solid var(--border-dim);
-    text-decoration: none;
-    color: inherit;
-    transition: background 120ms var(--ease);
+  .research-section {
+    padding-top: 1rem;
   }
-  .entry:first-child { border-top: 1px solid var(--border-dim); }
-  .entry:hover { background: oklch(0.15 0.01 265 / 0.02); text-decoration: none; }
 
-  .entry-date {
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-count {
     font-size: 0.8125rem;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
-    padding-top: 0.15rem;
   }
 
-  .entry-title {
-    font-size: 1.1rem;
-    font-weight: 650;
+  .research-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border-dim);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+
+  .card {
+    display: block;
+    padding: 1.5rem 1.8rem;
+    background: var(--surface);
+    color: inherit;
+    text-decoration: none;
+    transition: background 200ms var(--ease);
+    animation: card-in 400ms var(--ease) var(--delay, 0ms) both;
+  }
+  .card:hover {
+    background: var(--surface-2);
+    color: inherit;
+  }
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.7rem;
+  }
+
+  .confidence-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .ci-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .ci-high { color: var(--green); }
+  .ci-high .ci-dot { background: var(--green); box-shadow: 0 0 8px var(--green-dim); }
+  .ci-medium { color: var(--orange); }
+  .ci-medium .ci-dot { background: var(--orange); box-shadow: 0 0 8px var(--orange-dim); }
+  .ci-low { color: var(--red); }
+  .ci-low .ci-dot { background: var(--red); box-shadow: 0 0 8px var(--red-dim); }
+
+  .card-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
     color: var(--ink);
-    margin-bottom: 0.3rem;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.5rem;
     line-height: 1.35;
+    transition: color 150ms var(--ease);
+  }
+  .card:hover .card-title {
+    color: var(--primary);
   }
 
-  .entry-summary {
-    font-size: 0.875rem;
+  .card-summary {
+    font-size: 0.9375rem;
     color: var(--ink-2);
-    line-height: 1.6;
+    line-height: 1.65;
+    margin-bottom: 0.8rem;
+    max-width: 65ch;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     margin-bottom: 0.6rem;
   }
 
-  .entry-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    align-items: center;
+  .card-tag {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.18rem 0.5rem;
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--muted);
+    border: 1px solid var(--border-dim);
   }
 
-  .tag {
-    font-size: 0.6875rem;
-    padding: 0.12rem 0.4rem;
-    border-radius: 3px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+  .card-method {
+    min-height: 1.2rem;
+  }
+
+  .method-text {
+    font-size: 0.75rem;
     color: var(--muted);
+    font-family: var(--mono);
+    opacity: 0.8;
+  }
+
+  @media (max-width: 768px) {
+    .hero-title { font-size: 2.25rem; }
+    .hero-desc { font-size: 1rem; }
+    .card { padding: 1.2rem 1rem; }
+    .card-title { font-size: 1.1rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card { animation: none; }
+    .pulse { animation: none; }
   }
 </style>

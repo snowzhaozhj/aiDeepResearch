@@ -2,72 +2,72 @@
 
 ## Theme
 
-Light. 场景：开发者在工位上，下午自然光，27 寸屏幕上阅读研究内容和对比工具。纯白背景让内容层次通过字重和语义色自然浮现。
+Dark. 场景：开发者深夜在暗光环境下阅读高密度技术研究，27 寸屏幕是主光源。暗色背景减少视觉疲劳，让内容层次通过光亮度差和色彩饱和度浮现。像阅读一份高品质情报简报，而非翻文档。
 
 ## Color
 
-策略：Restrained，但在关键位置（决策流入口、数据可视化）允许 Committed 升级。
+策略：Committed。玫瑰红不再只是链接色，而是品牌签名，在暗背景上以发光感存在。
 
 ### Palette (OKLCH)
 
 ```
 Background layers:
-  bg:         oklch(1.000 0.000 0)       /* 纯白 */
-  surface:    oklch(0.975 0.002 265)     /* 微偏蓝灰，卡片/侧栏 */
-  surface-2:  oklch(0.955 0.004 265)     /* 更深一级 */
-  border:     oklch(0.91 0.006 265)
-  border-dim: oklch(0.94 0.004 265)
+  bg:         oklch(0.13 0.015 350)      /* 深暖黑，带微妙玫瑰底色 */
+  surface:    oklch(0.17 0.012 350)      /* 抬升层，卡片 */
+  surface-2:  oklch(0.21 0.010 350)      /* 更亮一级，hover/active */
+  border:     oklch(0.26 0.012 350)      /* 可见分隔 */
+  border-dim: oklch(0.21 0.008 350)      /* 微弱分隔 */
 
 Text:
-  ink:        oklch(0.15 0.010 265)      /* 主文本，近黑微偏蓝 */
-  ink-2:      oklch(0.30 0.010 265)      /* 次要文本 */
-  muted:      oklch(0.49 0.008 265)      /* 辅助/标签文本 */
+  ink:        oklch(0.93 0.008 80)       /* 暖白，正文主色 */
+  ink-2:      oklch(0.72 0.008 80)       /* 次要文本 */
+  muted:      oklch(0.52 0.006 80)       /* 辅助/标签 */
 
-Primary (seed hue 357°):
-  primary:    oklch(0.52 0.17 357)       /* 深玫瑰红，交互/选中/主操作 */
-  primary-dim:oklch(0.52 0.17 357 / 0.08)
-  primary-bg: oklch(0.96 0.015 357)      /* callout 底色 */
+Primary (seed hue 357°, 暗底上提亮):
+  primary:    oklch(0.68 0.22 357)       /* 发光玫瑰，交互/选中/品牌 */
+  primary-dim:oklch(0.68 0.22 357 / 0.15)
+  primary-bg: oklch(0.18 0.04 357)       /* callout 底色 */
 
 Accent:
-  accent:     oklch(0.42 0.11 230)       /* 深靛蓝，辅助色 */
-  accent-dim: oklch(0.42 0.11 230 / 0.07)
+  accent:     oklch(0.72 0.10 200)       /* 冷青，与暖主色形成张力 */
+  accent-dim: oklch(0.72 0.10 200 / 0.12)
 
-Semantic:
-  green:      oklch(0.48 0.14 155)       /* high confidence, active */
-  orange:     oklch(0.55 0.14 55)        /* medium confidence, warning */
-  red:        oklch(0.50 0.16 25)        /* low confidence, deprecated */
-  purple:     oklch(0.48 0.15 300)       /* emerging */
+Semantic (暗底上用更高明度):
+  green:      oklch(0.72 0.16 155)       /* high confidence, active */
+  green-dim:  oklch(0.72 0.16 155 / 0.12)
+  orange:     oklch(0.74 0.14 65)        /* medium confidence */
+  orange-dim: oklch(0.74 0.14 65 / 0.12)
+  red:        oklch(0.68 0.17 25)        /* low confidence, deprecated */
+  red-dim:    oklch(0.68 0.17 25 / 0.10)
+  purple:     oklch(0.70 0.15 300)       /* emerging */
+  purple-dim: oklch(0.70 0.15 300 / 0.10)
 ```
-
-每个语义色有 dim 变体（alpha 0.08-0.09），用于徽章背景色。
 
 ## Typography
 
 ```
-Font stack: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Noto Sans SC", sans-serif
-Mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace
+Font stack: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Noto Sans SC", sans-serif
+Mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace
 
-Scale (ratio ~1.2):
-  0.6875rem  — 标签、元数据（weight 600, uppercase）
-  0.8125rem  — 辅助文本、卡片摘要
-  0.9375rem  — 正文（line-height 1.75）
-  1.125rem   — 小标题（weight 650）
-  1.5rem     — 页面标题（weight 750）
-  2rem       — 展示标题（weight 800, letter-spacing -0.025em）
+Scale (ratio ~1.33, 比旧版更戏剧化):
+  0.75rem   — 标签、元数据（weight 500）
+  0.8125rem — 辅助文本
+  1rem      — 正文（weight 400, line-height 1.8）
+  1.25rem   — 小标题（weight 650）
+  1.875rem  — 页面标题（weight 750, tracking -0.025em）
+  2.75rem   — 展示标题（weight 800, tracking -0.035em）
 
-Max width: 68ch for prose, breakout to 90ch for tables/data
+Max width: 72ch for prose, breakout to 96ch for tables/data
 ```
-
-## Components
-
-详见 `src/styles/global.css` 中的 badge / callout / comparison 样式定义。
 
 ## Layout
 
-三栏：左导航（220px）+ 内容区（弹性，max 820px）+ 右侧留白。移动端待实现。
+去掉固定侧边栏。采用顶部极简导航 + 中心内容区（max 900px）。
+首页为研究索引，研究详情页为沉浸阅读模式。
 
 ## Motion
 
-- 120-200ms, ease-out (cubic-bezier(0.16, 1, 0.3, 1))
-- 仅用于 hover 状态和 details 展开
-- `@media (prefers-reduced-motion: reduce)` 降级
+- 150-250ms, ease-out-expo (cubic-bezier(0.16, 1, 0.3, 1))
+- hover: subtle glow / opacity shift
+- 页面内容入场: transform + opacity, staggered
+- `@media (prefers-reduced-motion: reduce)` 简化为 crossfade 或即时
