@@ -1,0 +1,536 @@
+---
+title: "AI 时代知识库、知识图谱与代码图谱深度研究"
+date: 2026-06-06
+summary: "覆盖 RAG 框架与选型、向量数据库对比、知识图谱自动构建、代码图谱工具爆发、图数据库选型、LLM+KG 融合模式、企业落地案例。经 107 个子代理对抗验证。"
+tags: ["RAG", "知识图谱", "代码图谱", "向量数据库", "GraphRAG"]
+method: "多源并行搜索 + deep-research workflow（107 子代理、25 条声明对抗验证，18 通过 7 驳回）"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import Timeline from '@components/Timeline.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  三个研究源合并：Agent 并行研究（知识库 + 知识图谱）+ deep-research workflow 对抗验证。107 子代理、25 条声明三票制对抗验证（18 通过，7 驳回）。
+</Callout>
+
+---
+
+# 第一部分：知识库与 RAG 技术
+
+---
+
+## 核心发现
+
+<KeyFinding level="high">
+  RAG 大约 70% 靠检索，30% 靠生成——优化检索的收益远大于换更强的 LLM。混合检索（BM25 + Embedding）+ Rerank 是 2026 年生产环境标配。
+</KeyFinding>
+
+---
+
+## 一、RAG 框架：LlamaIndex vs LangChain
+
+### LangChain — 通用 LLM 应用编排框架
+
+<ComparisonMatrix
+  headers={["维度", "数据"]}
+  rows={[
+    { "维度": "GitHub Stars", "数据": "~185K（2026 年 6 月）" },
+    { "维度": "核心定位", "数据": "通用 AI 工作流编排，擅长多步骤任务链、Agent 构建、工具调用" },
+    { "维度": "关键子项目", "数据": "LangGraph（30K+ stars，状态图工作流引擎）、LangSmith（商业调试平台）" },
+    { "维度": "学习曲线", "数据": "陡峭——概念多，版本迭代快，API 时有 breaking change" },
+  ]}
+/>
+
+<Callout type="insight" title="隐藏护城河">
+  LangChain 的真正护城河不在框架本身，而在于 AI 编码工具（Cursor/Copilot）对其代码的训练数据覆盖度最高——使用 LangChain 时 AI 辅助编程的补全准确率显著优于小众框架。
+</Callout>
+
+### LlamaIndex — RAG/数据索引专精框架
+
+<ComparisonMatrix
+  headers={["维度", "数据"]}
+  rows={[
+    { "维度": "GitHub Stars", "数据": "~38K" },
+    { "维度": "核心定位", "数据": "数据驱动的 AI 应用框架，专注复杂 RAG 管道、文档解析、索引策略" },
+    { "维度": "关键子项目", "数据": "LlamaParse（企业级文档解析，90+ 文件类型）、Workflows（事件驱动工作流引擎）" },
+    { "维度": "学习曲线", "数据": "平缓——API 设计简洁，上手门槛低" },
+  ]}
+/>
+
+### 选型决策
+
+- 做"AI 知识库"类应用（私有文档问答、多文档推理）→ **LlamaIndex**
+- 做复杂 Agent 工作流（多工具调用、多模型编排）→ **LangChain**
+- 两者并非互斥：LlamaIndex 处理数据层，LangChain 做逻辑编排，可组合使用
+
+### RAG 一站式平台
+
+<ComparisonMatrix
+  headers={["平台", "Stars", "核心定位", "适用场景"]}
+  rows={[
+    { "平台": "Dify", "Stars": "45K+", "核心定位": "全栈 LLM 应用平台，可视化工作流 + Agent", "适用场景": "企业快速上线，非技术人员可参与" },
+    { "平台": "RAGFlow", "Stars": "18K+", "核心定位": "深度文档理解 RAG 引擎（DeepDoc OCR + 布局识别）", "适用场景": "复杂 PDF/合同/扫描件的高精度检索" },
+    { "平台": "FastGPT", "Stars": "25K+", "核心定位": "轻量 RAG + Agent 平台", "适用场景": "个人/小团队快速搭建知识库问答" },
+  ]}
+/>
+
+<Callout type="tip" title="组合实践">
+  Dify 工作流编排能力强但知识库检索精度一般；RAGFlow 检索精度高但工作流弱。常见做法是 Dify + RAGFlow 组合——用 RAGFlow 做检索后端，Dify 做前端编排。
+</Callout>
+
+---
+
+## 二、向量数据库选型
+
+### 主流对比（2026 年数据）
+
+<ComparisonMatrix
+  headers={["数据库", "Stars", "语言", "核心定位", "适用场景"]}
+  rows={[
+    { "数据库": "Milvus", "Stars": "34.2K", "语言": "Go+C++", "核心定位": "分布式云原生，百亿级", "适用场景": "超大规模、多模态搜索" },
+    { "数据库": "Qdrant", "Stars": "23.1K", "语言": "Rust", "核心定位": "高性能，性价比之王", "适用场景": "中小规模高并发" },
+    { "数据库": "Chroma", "Stars": "19.4K", "语言": "Python", "核心定位": "轻量级，快速原型", "适用场景": "MVP 验证、小团队" },
+    { "数据库": "Weaviate", "Stars": "13.1K", "语言": "Go", "核心定位": "混合搜索专家，GraphQL", "适用场景": "知识图谱 + 向量" },
+    { "数据库": "Pinecone", "Stars": "闭源 SaaS", "语言": "—", "核心定位": "零运维全托管", "适用场景": "预算充足、快速上线" },
+  ]}
+  highlight="Qdrant"
+/>
+
+### 选型决策树
+
+- 快速做 Demo、本地调试 → **Chroma**
+- 已有 PostgreSQL → **pgvector**
+- 中小规模、追求低延迟 → **Qdrant**
+- 知识图谱 + 向量混合检索 → **Weaviate**
+- 超大规模（亿级+）→ **Milvus**
+- 不想运维 → **Pinecone**
+
+### Embedding 模型选型
+
+<ComparisonMatrix
+  headers={["模型", "特点", "适用场景"]}
+  rows={[
+    { "模型": "text-embedding-3 (OpenAI)", "特点": "商用最成熟，英文表现优异", "适用场景": "通用场景" },
+    { "模型": "BGE 系列 (智源 BAAI)", "特点": "开源最强中文 embedding", "适用场景": "中文 RAG、私有化部署" },
+    { "模型": "BGE-M3", "特点": "多语言、多粒度、多检索模式", "适用场景": "多语言 RAG" },
+    { "模型": "Cohere embed-v4", "特点": "原生压缩、集成 Rerank", "适用场景": "企业级多语言" },
+    { "模型": "Voyage AI", "特点": "特定基准表现突出", "适用场景": "代码检索、科学文本" },
+  ]}
+  highlight="BGE 系列 (智源 BAAI)"
+/>
+
+<Callout type="warning" title="选型魔性">
+  中文场景优先 BGE 系列（免费、可私有化）。但 Embedding 模型选型"很魔性"——不同数据集上表现差异大，建议在自己的数据上做对比实验。
+</Callout>
+
+---
+
+## 三、知识库产品
+
+### AI 记忆层：Mem0（57.6K stars）
+
+- Y Combinator S24 孵化，AI Agent 的通用记忆层
+- 三层记忆架构：用户级、会话级、Agent 级
+- 与 RAG 的本质区别：Mem0 理解实体关系、支持新近性/相关性/衰减权重、跨会话持久化
+- 官方数据：比 OpenAI Memory 准确率高 26%，响应速度快 91%
+
+<Callout type="warning">
+  局限：无时序建模能力，已出现 MemOS（图谱结构）和 TiMem（时序记忆树）等竞品。
+</Callout>
+
+### 企业级方案
+
+- **Glean**：企业 AI 搜索，100+ SaaS 连接器，底层构建 Enterprise Knowledge Graph
+- **Guru**：知识管理 + AI 验证，自动识别过期知识
+
+---
+
+## 四、GraphRAG / 知识图谱增强 RAG
+
+### 为什么需要 GraphRAG
+
+传统 RAG 的两大缺陷：信息片段间无法连点成线（多跳推理弱）；全局归纳总结能力不足。
+
+### 方案对比
+
+<ComparisonMatrix
+  headers={["方案", "Stars", "核心机制", "适用场景"]}
+  rows={[
+    { "方案": "Microsoft GraphRAG", "Stars": "33.2K", "核心机制": "LLM 抽取 KG → 社区检测 → 分层摘要", "适用场景": "需要全局归纳的场景" },
+    { "方案": "LightRAG", "Stars": "29K", "核心机制": "图结构索引 + 双层检索", "适用场景": "生产部署、需增量更新（2026 首选）" },
+    { "方案": "nano-graphrag", "Stars": "~4K", "核心机制": "GraphRAG 轻量 Python 实现", "适用场景": "学习/原型验证" },
+  ]}
+  highlight="LightRAG"
+/>
+
+<Callout type="insight">
+  GraphRAG 索引成本是传统 RAG 的 5-10 倍，小数据集不要用。LightRAG 比 GraphRAG 检索效率提升 99.98%（独立评测），支持增量更新。
+</Callout>
+
+---
+
+## 五、RAG 生产最佳实践
+
+### 分块策略
+
+- 起步用 RecursiveCharacterTextSplitter（chunk_size=512, chunk_overlap=50）
+- 中文场景推荐句子级分块（200-500 token）
+- SIGIR 2025 新发现：语义独立性是关键驱动因素，事实正确性可提升 56.2%
+
+### 混合检索 + Rerank（2026 年标配）
+
+1. **粗召回**：BM25 + Embedding 向量检索，Top-50 候选
+2. **精排**：Cross-Encoder/Reranker 重新打分
+
+主流 Reranker：Cohere Reranker（商用最好）、BGE-Reranker-v2-m3（开源最强中文）
+
+### 关键坑点
+
+<Callout type="warning" title="生产避坑">
+  1. 文档提取质量是一切的基础，PDF 表格/扫描件需专用解析工具
+  2. Chunk Size 不是越大越好——大块压缩率高 = 信息损失严重
+  3. 不要只用向量检索——混合检索 + Rerank 效果显著优于单纯向量
+  4. 上线前必须建立评估体系（RAGAS 等框架）
+</Callout>
+
+---
+
+## 技术选型总览
+
+<ComparisonMatrix
+  headers={["场景", "推荐组合"]}
+  rows={[
+    { "场景": "私有文档问答/知识库", "推荐组合": "LlamaIndex + Qdrant/Milvus + BGE" },
+    { "场景": "复杂 Agent 工作流", "推荐组合": "LangChain/LangGraph" },
+    { "场景": "快速搭建（非技术人员）", "推荐组合": "Dify（可接 RAGFlow 做检索后端）" },
+    { "场景": "需要全局归纳/多跳推理", "推荐组合": "GraphRAG/LightRAG" },
+    { "场景": "AI Agent 长期记忆", "推荐组合": "Mem0" },
+    { "场景": "企业级知识搜索", "推荐组合": "Glean" },
+  ]}
+/>
+
+---
+
+## 六、对抗验证补充（deep-research workflow）
+
+以下发现经过 107 个子代理、25 条声明的三票制对抗验证（18 通过，7 驳回）。
+
+### 经验证的新发现
+
+<KeyFinding level="high">
+  LightRAG 五种查询模式（Local/Global/Hybrid/Naive/Mix）均经 3-0 验证确认。默认 Mix 模式融合本地实体匹配、全局关系链检索和向量相似度检索。增量更新通过 set merging 合并局部图。
+</KeyFinding>
+
+- **Graph-augmented RAG 完整管道**已可在 Azure HorizonDB 内端到端完成（pgvector → cross-encoder → Apache AGE Cypher → RRF 融合 → LLM 生成），Build 2026 公开预览。
+- **Graphify**（59.8k stars，YC S26）：tree-sitter AST 本地解析（28 语言，零 API 调用）+ LLM 语义抽取双重架构，通过 PreToolUse hook 与 Claude Code 深度集成。
+- **AgentMemory**（20k+ stars）：四层记忆架构（Working/Episodic/Semantic/Procedural），按 Ebbinghaus 曲线衰减。
+- **NirDiamant/RAG_Techniques**（27.7k stars）：42+ 个 Notebook 教程，覆盖三种 Graph RAG 实现。
+
+### 被驳回的声明
+
+<VerdictCard claim="GraphRAG 比纯向量 RAG 准确率提升 3 倍" verdict="rejected" votes="0/3">
+  无可靠基准数据支撑，原始声明缺少实验环境、数据集和评估指标说明。
+</VerdictCard>
+
+<VerdictCard claim="HorizonDB 判例法数据集召回率从 40% 提升至 70%" verdict="rejected" votes="0/3">
+  定量声明不可验证，来源为供应商博客，缺乏独立复现。
+</VerdictCard>
+
+<VerdictCard claim="AgentMemory LongMemEval-S R@5 95.2%" verdict="rejected" votes="0/3">
+  README 自报数据，无独立验证，无测试代码可供复现。
+</VerdictCard>
+
+<VerdictCard claim="纯向量 RAG 不足以支撑企业级知识助手" verdict="partial" votes="1/3">
+  过度绝对化。对于简单事实查询场景，纯向量 RAG 仍然够用且成本更低。
+</VerdictCard>
+
+### 注意事项
+
+<Callout type="warning">
+  1. 多个项目发布于 2026 年 5-6 月，处于极早期阶段（CodeGraph 单次 commit/17 星，NeuroLog 未经同行评审）
+  2. ColGrep 的信息完全来自 LightOn 官方博客，缺乏独立基准测试
+  3. 代码图谱领域工具碎片化明显，尚未形成统一标准
+</Callout>
+
+---
+
+# 第二部分：知识图谱与代码图谱
+
+---
+
+## 核心发现
+
+<KeyFinding level="high">
+  知识图谱构建已从"人工标注"进入"LLM 全自动构建"时代。GraphRAG（33.5k stars）和 LightRAG 代表两条路线：前者追求全局语义聚合与深度推理，后者追求轻量高效与增量更新。多数企业场景 LightRAG 即可满足。
+</KeyFinding>
+
+<KeyFinding level="high">
+  代码知识图谱是 2026 年 5 月的爆发点。CodeGraph（34k+ stars）和 Understand-Anything（35k+ stars）在一个月内横扫 GitHub Trending，核心价值：让 AI 编程助手的 Token 消耗降低 57-90%，工具调用减少 62-70%。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  图数据库格局已定：Neo4j 生态霸主 + NebulaGraph 分布式新秀。Neo4j 在 DB-Engines 排名第一；NebulaGraph 排名第二，原生分布式架构在十亿级数据下性能碾压 Neo4j，且全面支持国产信创。
+</KeyFinding>
+
+---
+
+## 一、知识图谱自动构建工具
+
+### 1.1 Microsoft GraphRAG — 深度推理的"重剑"
+
+- **GitHub**：microsoft/graphrag | **33.5k stars** / 3.5k forks
+- **最新版本**：v3.1.0（2026 年 5 月活跃）
+- **许可证**：MIT
+- **核心机制**：文本分块 → LLM 抽取实体/关系 → 构建知识图谱 → Leiden 算法社区检测 → LLM 为每个社区生成摘要 → 查询时遍历社区摘要生成全局答案
+- **三种检索模式**：Local（局部子图）、Global（全局社区）、Drift（混合漂移）
+
+<ScoreCard
+  title="GraphRAG 维度评估"
+  scores={[
+    { label: "全局问答质量", value: 9, max: 10 },
+    { label: "逻辑可解释性", value: 9, max: 10 },
+    { label: "多跳推理", value: 8, max: 10 },
+    { label: "构建成本", value: 3, max: 10 },
+    { label: "增量更新", value: 2, max: 10 },
+    { label: "响应速度", value: 4, max: 10 },
+  ]}
+/>
+
+<Callout type="insight" title="非显而易见的洞察">
+  GraphRAG 的真正价值不在于"用了图"，而在于社区摘要机制——它本质上是一种自动化的 QFS（Query Focused Summarization）。传统 RAG 只能找到"与问题相似的内容"，而 GraphRAG 通过社区聚合实现了"跨文档主题归纳"。对于简单的事实查询，GraphRAG 反而是大材小用。
+</Callout>
+
+### 1.2 LightRAG — 轻量高效的"快刀"
+
+- **GitHub**：HKUDS/LightRAG | EMNLP 2025 论文
+- **核心机制**：实体/关系抽取 → 去重 → 轻量图结构 → 双层检索（低级检索实体级 + 高级检索主题级）
+- **省略社区分层结构，用键值对索引替代**
+
+<ScoreCard
+  title="LightRAG 维度评估"
+  scores={[
+    { label: "全局问答质量", value: 7, max: 10 },
+    { label: "构建成本", value: 9, max: 10 },
+    { label: "增量更新", value: 9, max: 10 },
+    { label: "响应速度", value: 9, max: 10 },
+    { label: "动态数据适配", value: 9, max: 10 },
+    { label: "深度推理", value: 5, max: 10 },
+  ]}
+/>
+
+### GraphRAG vs LightRAG 选型
+
+<ComparisonMatrix
+  headers={["维度", "GraphRAG", "LightRAG"]}
+  rows={[
+    { "维度": "设计哲学", "GraphRAG": "\"深\"与\"广\"", "LightRAG": "\"快\"与\"省\"" },
+    { "维度": "构建方式", "GraphRAG": "全量/批量构建", "LightRAG": "支持增量更新" },
+    { "维度": "API 调用成本", "GraphRAG": "高（每块过 LLM + 社区摘要）", "LightRAG": "低（去重 + 轻量模型）" },
+    { "维度": "全局问答质量", "GraphRAG": "优", "LightRAG": "良" },
+    { "维度": "响应延迟", "GraphRAG": "较高", "LightRAG": "低" },
+    { "维度": "动态数据适配", "GraphRAG": "弱（需重建）", "LightRAG": "强" },
+  ]}
+/>
+
+### 1.3 其他方案
+
+- **PathRAG**：在 LightRAG 基础上使用流式剪枝算法提取关键路径，减少噪声
+- **HippoRAG2**：仿人脑海马体记忆机制，成本对比 GraphRAG 降低 12 倍
+- **AutoSchemaKG / ATLAS**：香港科大 + 华为，无需预定义模式，LLM 自动提取三元组并归纳本体。处理超 5000 万文档，构建 9 亿节点 + 59 亿边
+- **Neo4j Document Intelligence**：2026 年 6 月发布，从非结构化文档一键自动构建 KG（仅限 Aura 云平台）
+
+---
+
+## 二、图数据库选型对比
+
+### 格局总览
+
+<ComparisonMatrix
+  headers={["图数据库", "排名", "架构", "查询语言", "核心优势", "核心劣势"]}
+  rows={[
+    { "图数据库": "Neo4j", "排名": "#1", "架构": "原生图存储", "查询语言": "Cypher", "核心优势": "生态最成熟、ACID 事务、丰富工具链", "核心劣势": "社区版仅单机、企业版价格高" },
+    { "图数据库": "NebulaGraph", "排名": "#2", "架构": "原生分布式", "查询语言": "nGQL", "核心优势": "水平扩展、万亿边、信创支持", "核心劣势": "生态年轻、上手难度略高" },
+    { "图数据库": "TigerGraph", "排名": "—", "架构": "并行图计算", "查询语言": "GSQL", "核心优势": "高性能并行、80+ 内置图算法", "核心劣势": "查询语言非主流" },
+    { "图数据库": "ArangoDB", "排名": "—", "架构": "多模型", "查询语言": "AQL", "核心优势": "图+文档+KV 一体", "核心劣势": "图专项性能不及专用" },
+  ]}
+  highlight="Neo4j"
+/>
+
+### 关键性能对比
+
+<ComparisonMatrix
+  headers={["场景", "Neo4j", "NebulaGraph"]}
+  rows={[
+    { "场景": "10 亿边单跳查询", "Neo4j": "数十秒", "NebulaGraph": "2ms" },
+    { "场景": "多跳查询延迟", "Neo4j": "数百秒", "NebulaGraph": "<5 秒" },
+    { "场景": "导入性能", "Neo4j": "一般", "NebulaGraph": "业界领先" },
+  ]}
+  highlight="10 亿边单跳查询"
+/>
+
+<Callout type="insight" title="非显而易见的洞察">
+  Neo4j 社区版只支持单机，这在很多选型文章中被一笔带过，但实际上是最关键的限制。如果数据规模超过单机承载能力（通常是数十亿节点/边），就必须上企业版或换别的。NebulaGraph 在国内大厂（阿里、京东、美团、网易、携程）已有成熟落地，比纸面数据更能说明生产可用性。
+</Callout>
+
+---
+
+## 三、代码图谱与代码理解工具
+
+<Timeline
+  events={[
+    { date: "2018", title: "tree-sitter 开源", detail: "GitHub 发布增量解析器生成器，后来成为所有代码图谱工具的底层基础设施" },
+    { date: "2024", title: "Sourcegraph 收缩开源", detail: "企业级代码搜索收缩开源范围，Cody AI 助手独立发展" },
+    { date: "2026-05", title: "CodeGraph 爆发", detail: "34k+ stars，编译器派代表——tree-sitter AST → SQLite，零 LLM 成本", type: "highlight" },
+    { date: "2026-05", title: "Understand-Anything 爆发", detail: "35k+ stars，LLM 派代表——tree-sitter + LLM 混合架构", type: "highlight" },
+    { date: "2026-05", title: "Graphify (YC S26)", detail: "59.8k stars，不仅读代码还能读文档/PDF/图片，构建全项目知识图谱", type: "highlight" },
+  ]}
+/>
+
+### 两大流派
+
+<ComparisonMatrix
+  headers={["维度", "编译器派（AST 静态解析）", "LLM 派（语义理解）"]}
+  rows={[
+    { "维度": "原理", "编译器派（AST 静态解析）": "tree-sitter AST 解析，提取函数/类/调用/继承", "LLM 派（语义理解）": "AST 结构提取 + LLM 语义理解" },
+    { "维度": "精确度", "编译器派（AST 静态解析）": "确定性解析，永远不出错", "LLM 派（语义理解）": "推断边可能不准确" },
+    { "维度": "成本", "编译器派（AST 静态解析）": "零 LLM 成本", "LLM 派（语义理解）": "首次构建消耗 token" },
+    { "维度": "能力边界", "编译器派（AST 静态解析）": "只理解代码结构（WHO calls WHO）", "LLM 派（语义理解）": "能理解设计意图（WHY）" },
+    { "维度": "代表工具", "编译器派（AST 静态解析）": "CodeGraph", "LLM 派（语义理解）": "Graphify、Understand-Anything" },
+  ]}
+/>
+
+### CodeGraph — 编译器派代表
+
+- **GitHub**：colbymchenry/codegraph | **34k+ stars**
+- **技术栈**：TypeScript 94.8%，无 Neo4j、无向量数据库、无外部 LLM API
+- **架构**：tree-sitter AST → 提取符号 + 边 → SQLite 本地存储 → MCP 协议暴露给 AI Agent
+
+<ScoreCard
+  title="CodeGraph 性能改善（Opus 4.8 测试）"
+  scores={[
+    { label: "费用节省", value: 35, max: 100 },
+    { label: "Token 减少", value: 59, max: 100 },
+    { label: "速度提升", value: 49, max: 100 },
+    { label: "工具调用减少", value: 70, max: 100 },
+  ]}
+/>
+
+### Understand-Anything — LLM 派代表
+
+- **GitHub**：Lum1104/Understand-Anything | **35k+ stars**
+- **核心机制**：Tree-sitter + LLM Hybrid（tree-sitter 负责确定性结构分析，LLM 负责语义理解）
+- **核心功能**：交互式知识图谱、多智能体管道、语义搜索
+- **兼容**：Claude Code、Cursor、VS Code Copilot、Gemini CLI、Codex
+
+<Callout type="insight" title="非显而易见的洞察">
+  tree-sitter 是真正的"隐形冠军"——2026 年所有爆火的代码知识图谱工具底层都在用它。代码知识图谱不需要图数据库，CodeGraph 用 SQLite 就够——因为代码图谱规模通常不超百万节点。纯代码项目用编译器派，有文档的项目加 LLM 派，两者可共存。
+</Callout>
+
+---
+
+## 四、LLM + 知识图谱融合模式
+
+### 两大融合方向
+
+<ComparisonMatrix
+  headers={["方向", "目标", "代表", "核心模式"]}
+  rows={[
+    { "方向": "KG-enhanced LLM", "目标": "用 KG 为 LLM 提供结构化知识，减少幻觉", "代表": "GraphRAG、LightRAG、PathRAG", "核心模式": "检索时从图谱获取子图/摘要作为上下文" },
+    { "方向": "LLM-augmented KG", "目标": "用 LLM 自动完成 KG 构建和维护", "代表": "AutoSchemaKG、Neo4j DocIntel", "核心模式": "LLM 做实体抽取、本体归纳、同义词消歧" },
+  ]}
+/>
+
+### Graph-R1 — ICML 2026 最新突破
+
+<KeyFinding level="medium">
+  Graph-R1 用端到端强化学习训练 Agent 在知识图谱上"边思考边检索"，AdaptR1 变体将思考 token 减少 69.71%（HotpotQA 上减少 90.35%），同时保持或超越基线性能。标志着 GraphRAG 从"管道式"向"自主式"的范式转移。
+</KeyFinding>
+
+### 融合模式成熟度
+
+<ComparisonMatrix
+  headers={["模式", "成熟度", "适用场景", "风险点"]}
+  rows={[
+    { "模式": "GraphRAG（社区摘要式）", "成熟度": "生产可用", "适用场景": "全局主题问答、研究分析", "风险点": "构建成本高，动态数据维护难" },
+    { "模式": "LightRAG（轻量图索引）", "成熟度": "生产可用", "适用场景": "企业 FAQ、动态数据场景", "风险点": "深度推理不及 GraphRAG" },
+    { "模式": "Graph-R1（RL Agent）", "成熟度": "研究阶段", "适用场景": "复杂多跳推理", "风险点": "训练成本高，泛化性待验证" },
+    { "模式": "LLM 全自动 KG 构建", "成熟度": "工程可用", "适用场景": "大规模文档处理", "风险点": "抽取质量依赖 LLM 能力" },
+  ]}
+/>
+
+---
+
+## 五、企业落地案例
+
+### Neo4j 生态
+
+- **Agent Memory**（neo4j-labs/agent-memory）：基于 Neo4j 的 AI Agent 持久记忆系统
+- **Document Intelligence**：从非结构化文档自动构建 KG
+- **落地领域**：金融风控（摩根大通动态交易图谱）、零售推荐（eBay 用户行为图谱提升 40% 转化率）、医药研发（靶点发现周期缩短至 8 个月）
+
+### NebulaGraph 国内大厂
+
+<ComparisonMatrix
+  headers={["企业", "场景", "效果"]}
+  rows={[
+    { "企业": "众安保险", "场景": "风控反欺诈（手机号异常热点检测）", "效果": "实时欺诈识别" },
+    { "企业": "泰康在线", "场景": "客户关系图 + 精准推荐", "效果": "理赔反欺诈、裂变营销" },
+    { "企业": "美团", "场景": "数据血缘管理", "效果": "—" },
+    { "企业": "京东", "场景": "商品关系图谱", "效果": "—" },
+    { "企业": "携程", "场景": "旅游知识图谱", "效果": "—" },
+  ]}
+/>
+
+---
+
+## 六、关键趋势判断
+
+### 知识图谱不会被 LLM 替代，但定位在变
+
+- **通用事实问答**：LLM 自身能力已经足够，KG 增强的边际价值在下降
+- **领域深度推理**：KG 依然不可替代——医疗、金融、法律等领域需要可审计、可解释、可追溯的知识链路
+- **Agent 记忆**：KG 正成为 AI Agent 的"长期记忆"基础设施
+
+### 代码知识图谱的窗口期
+
+<Callout type="warning" title="风险提示">
+  当前代码知识图谱工具的爆发是因为 AI 编程助手的"Token 浪费"问题实在太痛。但这个问题也可能被 LLM 自身解决（更长上下文、更好的缓存、更聪明的检索策略）。
+</Callout>
+
+### 推荐技术组合
+
+<ComparisonMatrix
+  headers={["场景", "推荐组合"]}
+  rows={[
+    { "场景": "企业知识库问答", "推荐组合": "LightRAG + Neo4j（中小规模）或 NebulaGraph（大规模）" },
+    { "场景": "深度研究/合规", "推荐组合": "GraphRAG + Neo4j" },
+    { "场景": "AI 编程助手增强", "推荐组合": "CodeGraph（纯代码）+ Graphify（有文档的项目）" },
+    { "场景": "Agent 长期记忆", "推荐组合": "Neo4j Agent Memory 或自建 KG + 向量混合存储" },
+    { "场景": "大规模自动化 KG 构建", "推荐组合": "AutoSchemaKG 流程 + LightRAG 增量更新" },
+  ]}
+/>
+
+---
+
+## 参考来源
+
+<ComparisonMatrix
+  headers={["来源", "类型"]}
+  rows={[
+    { "来源": "Microsoft GraphRAG (GitHub)", "类型": "主源" },
+    { "来源": "LightRAG (EMNLP 2025)", "类型": "论文" },
+    { "来源": "CodeGraph (GitHub)", "类型": "主源" },
+    { "来源": "Understand-Anything (GitHub)", "类型": "主源" },
+    { "来源": "Graphify (GitHub)", "类型": "主源" },
+    { "来源": "AutoSchemaKG / ATLAS (港科大+华为)", "类型": "论文" },
+    { "来源": "Neo4j Document Intelligence", "类型": "主源" },
+    { "来源": "Graph-R1 (ICML 2026)", "类型": "论文" },
+    { "来源": "HippoRAG2", "类型": "论文" },
+    { "来源": "IBM Agent Logic (HuggingFace Blog)", "类型": "博客" },
+    { "来源": "NebulaGraph 排名数据", "类型": "数据" },
+  ]}
+/>
