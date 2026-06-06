@@ -6,6 +6,13 @@ interface Props {
 }
 
 const { headers, rows, highlight } = Astro.props;
+
+function renderCell(text: string): string {
+  return text.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1</a>'
+  );
+}
 ---
 
 <div class="matrix-wrap">
@@ -22,7 +29,7 @@ const { headers, rows, highlight } = Astro.props;
         {rows.map((row) => (
           <tr class={highlight && row[headers[0]] === highlight ? "row-highlight" : ""}>
             {headers.map((h, i) => (
-              <td class={i === 0 ? "cell-name" : ""}>{row[h]}</td>
+              <td class={i === 0 ? "cell-name" : ""} set:html={renderCell(row[h])} />
             ))}
           </tr>
         ))}
@@ -82,6 +89,17 @@ const { headers, rows, highlight } = Astro.props;
     font-weight: 600;
     color: var(--ink);
     white-space: nowrap;
+  }
+
+  .matrix :global(a) {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: oklch(from var(--primary) l c h / 0.3);
+    text-underline-offset: 2px;
+    transition: text-decoration-color 150ms var(--ease);
+  }
+  .matrix :global(a:hover) {
+    text-decoration-color: var(--primary);
   }
 
   .row-highlight td {

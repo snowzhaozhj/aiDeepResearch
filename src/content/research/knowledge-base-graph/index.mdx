@@ -226,9 +226,9 @@ import Callout from '@components/Callout.astro';
 </KeyFinding>
 
 - **Graph-augmented RAG 完整管道**已可在 Azure HorizonDB 内端到端完成（pgvector → cross-encoder → Apache AGE Cypher → RRF 融合 → LLM 生成），Build 2026 公开预览。
-- **Graphify**（59.8k stars，YC S26）：tree-sitter AST 本地解析（28 语言，零 API 调用）+ LLM 语义抽取双重架构，通过 PreToolUse hook 与 Claude Code 深度集成。
-- **AgentMemory**（20k+ stars）：四层记忆架构（Working/Episodic/Semantic/Procedural），按 Ebbinghaus 曲线衰减。
-- **NirDiamant/RAG_Techniques**（27.7k stars）：42+ 个 Notebook 教程，覆盖三种 Graph RAG 实现。
+- **[Graphify](https://github.com/safishamsi/graphify)**（59.8k stars，YC S26）：tree-sitter AST 本地解析（28 语言，零 API 调用）+ LLM 语义抽取双重架构，通过 PreToolUse hook 与 Claude Code 深度集成。
+- **[AgentMemory](https://github.com/neo4j-labs/agent-memory)**（20k+ stars）：四层记忆架构（Working/Episodic/Semantic/Procedural），按 Ebbinghaus 曲线衰减。
+- **[NirDiamant/RAG_Techniques](https://github.com/NirDiamant/RAG_Techniques)**（27.7k stars）：42+ 个 Notebook 教程，覆盖三种 Graph RAG 实现。
 
 ### 被驳回的声明
 
@@ -282,7 +282,7 @@ import Callout from '@components/Callout.astro';
 
 ### 1.1 Microsoft GraphRAG — 深度推理的"重剑"
 
-- **GitHub**：microsoft/graphrag | **33.5k stars** / 3.5k forks
+- **GitHub**：[microsoft/graphrag](https://github.com/microsoft/graphrag) | **33.5k stars** / 3.5k forks
 - **最新版本**：v3.1.0（2026 年 5 月活跃）
 - **许可证**：MIT
 - **核心机制**：文本分块 → LLM 抽取实体/关系 → 构建知识图谱 → Leiden 算法社区检测 → LLM 为每个社区生成摘要 → 查询时遍历社区摘要生成全局答案
@@ -306,7 +306,7 @@ import Callout from '@components/Callout.astro';
 
 ### 1.2 LightRAG — 轻量高效的"快刀"
 
-- **GitHub**：HKUDS/LightRAG | EMNLP 2025 论文
+- **GitHub**：[HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) | EMNLP 2025 论文
 - **核心机制**：实体/关系抽取 → 去重 → 轻量图结构 → 双层检索（低级检索实体级 + 高级检索主题级）
 - **省略社区分层结构，用键值对索引替代**
 
@@ -340,8 +340,8 @@ import Callout from '@components/Callout.astro';
 
 - **PathRAG**：在 LightRAG 基础上使用流式剪枝算法提取关键路径，减少噪声
 - **HippoRAG2**：仿人脑海马体记忆机制，成本对比 GraphRAG 降低 12 倍
-- **AutoSchemaKG / ATLAS**：香港科大 + 华为，无需预定义模式，LLM 自动提取三元组并归纳本体。处理超 5000 万文档，构建 9 亿节点 + 59 亿边
-- **Neo4j Document Intelligence**：2026 年 6 月发布，从非结构化文档一键自动构建 KG（仅限 Aura 云平台）
+- **[AutoSchemaKG / ATLAS](https://zhuanlan.zhihu.com/p/1916529529771525080)**：香港科大 + 华为，无需预定义模式，LLM 自动提取三元组并归纳本体。处理超 5000 万文档，构建 9 亿节点 + 59 亿边
+- **[Neo4j Document Intelligence](https://neo4j.com/blog/genai/introducing-document-intelligence-from-documents-to-a-knowledge-graph-right-inside-aura/)**：2026 年 6 月发布，从非结构化文档一键自动构建 KG（仅限 Aura 云平台）
 
 ---
 
@@ -405,7 +405,7 @@ import Callout from '@components/Callout.astro';
 
 ### CodeGraph — 编译器派代表
 
-- **GitHub**：colbymchenry/codegraph | **34k+ stars**
+- **GitHub**：[colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) | **34k+ stars**
 - **技术栈**：TypeScript 94.8%，无 Neo4j、无向量数据库、无外部 LLM API
 - **架构**：tree-sitter AST → 提取符号 + 边 → SQLite 本地存储 → MCP 协议暴露给 AI Agent
 
@@ -421,7 +421,7 @@ import Callout from '@components/Callout.astro';
 
 ### Understand-Anything — LLM 派代表
 
-- **GitHub**：Lum1104/Understand-Anything | **35k+ stars**
+- **GitHub**：[Lum1104/Understand-Anything](https://github.com/Lum1104/Understand-Anything) | **35k+ stars**
 - **核心机制**：Tree-sitter + LLM Hybrid（tree-sitter 负责确定性结构分析，LLM 负责语义理解）
 - **核心功能**：交互式知识图谱、多智能体管道、语义搜索
 - **兼容**：Claude Code、Cursor、VS Code Copilot、Gemini CLI、Codex
@@ -468,7 +468,7 @@ import Callout from '@components/Callout.astro';
 
 ### Neo4j 生态
 
-- **Agent Memory**（neo4j-labs/agent-memory）：基于 Neo4j 的 AI Agent 持久记忆系统
+- **[Agent Memory](https://github.com/neo4j-labs/agent-memory)**（neo4j-labs/agent-memory）：基于 Neo4j 的 AI Agent 持久记忆系统
 - **Document Intelligence**：从非结构化文档自动构建 KG
 - **落地领域**：金融风控（摩根大通动态交易图谱）、零售推荐（eBay 用户行为图谱提升 40% 转化率）、医药研发（靶点发现周期缩短至 8 个月）
 
@@ -521,16 +521,18 @@ import Callout from '@components/Callout.astro';
 <ComparisonMatrix
   headers={["来源", "类型"]}
   rows={[
-    { "来源": "Microsoft GraphRAG (GitHub)", "类型": "主源" },
-    { "来源": "LightRAG (EMNLP 2025)", "类型": "论文" },
-    { "来源": "CodeGraph (GitHub)", "类型": "主源" },
-    { "来源": "Understand-Anything (GitHub)", "类型": "主源" },
-    { "来源": "Graphify (GitHub)", "类型": "主源" },
-    { "来源": "AutoSchemaKG / ATLAS (港科大+华为)", "类型": "论文" },
-    { "来源": "Neo4j Document Intelligence", "类型": "主源" },
-    { "来源": "Graph-R1 (ICML 2026)", "类型": "论文" },
-    { "来源": "HippoRAG2", "类型": "论文" },
-    { "来源": "IBM Agent Logic (HuggingFace Blog)", "类型": "博客" },
-    { "来源": "NebulaGraph 排名数据", "类型": "数据" },
+    { "来源": "[Microsoft GraphRAG](https://github.com/microsoft/graphrag)", "类型": "主源" },
+    { "来源": "[LightRAG](https://github.com/HKUDS/LightRAG)", "类型": "论文" },
+    { "来源": "[CodeGraph](https://github.com/colbymchenry/codegraph)", "类型": "主源" },
+    { "来源": "[Understand-Anything](https://github.com/Lum1104/Understand-Anything)", "类型": "主源" },
+    { "来源": "[Graphify](https://github.com/safishamsi/graphify)", "类型": "主源" },
+    { "来源": "[AutoSchemaKG / ATLAS](https://zhuanlan.zhihu.com/p/1916529529771525080)", "类型": "论文" },
+    { "来源": "[Neo4j Document Intelligence](https://neo4j.com/blog/genai/introducing-document-intelligence-from-documents-to-a-knowledge-graph-right-inside-aura/)", "类型": "主源" },
+    { "来源": "[Graph-R1 (ICML 2026)](https://x.com/DanKornas/status/2060866588509896859)", "类型": "论文" },
+    { "来源": "[HippoRAG2](https://cloud.tencent.com/developer/article/2505959)", "类型": "论文" },
+    { "来源": "[IBM Agent Logic](https://huggingface.co/blog/ibm-research/agent-logic-and-scalable-ai-adoption)", "类型": "博客" },
+    { "来源": "[NebulaGraph 排名](https://zhuanlan.zhihu.com/p/1949057311587951278)", "类型": "数据" },
+    { "来源": "[Semantica](https://github.com/semantica-agi/semantica)", "类型": "主源" },
+    { "来源": "[NirDiamant/RAG_Techniques](https://github.com/NirDiamant/RAG_Techniques)", "类型": "教程" },
   ]}
 />
