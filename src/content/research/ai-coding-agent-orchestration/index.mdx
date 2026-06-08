@@ -1,0 +1,273 @@
+---
+title: "AI Coding Agent 编排层深度对比研究"
+date: 2026-06-08
+summary: "系统性对比 Claude Code、OpenAI Codex CLI、Cursor、Windsurf、Devin 五大 AI coding agent 的多步骤任务编排架构，聚焦确定性脚本 vs 模型驱动的设计分野。经 104 个子代理对抗验证。"
+tags: ["AI Agent", "编排层", "Claude Code", "Codex", "多代理", "上下文管理"]
+method: "5 角度并行搜索、22 源抓取、25 条声明三票制对抗验证（13 通过，12 驳回）"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  5 个研究角度并行深挖（架构对比、并发机制、基准测试、开发者经验、产品动态），22 个来源抓取 95 条声明，对 top 25 进行三票制对抗验证（13 通过，12 驳回）。104 个子代理，360 万 token。
+</Callout>
+
+<Callout type="warning" title="覆盖不均衡">
+  研究结果严重偏向 Claude Code（经验证发现 5 条中占 3 条）。Cursor Background Agent 和 Windsurf Cascades 几乎无可验证的公开架构文档通过对抗验证。Devin 的编排架构同样缺乏可靠的技术细节。这不代表这些工具不优秀，而是它们的内部实现不透明。
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  AI Coding Agent 编排层正在从纯模型驱动的 ReAct 循环向「混合编排」范式收敛。关键分野不在于是否使用 LLM，而在于将**编排关注点**（循环、分支、屏障）与**推理关注点**（上下文理解、模式匹配）分离的程度。Claude Code Dynamic Workflows 是这一趋势的标志性实现。
+</KeyFinding>
+
+<KeyFinding level="high">
+  上下文漂移是所有 AI coding agent 的根本瓶颈。EvoClaw 基准测试量化了这一点：代理在孤立任务上表现超 80%，但在连续演化场景中骤降至 38% 以下。编排层分离本质上是在架构层面回应这个问题——把控制流移出上下文窗口，让 LLM 只负责它擅长的推理。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  并发能力是编排层设计的试金石。Claude Code 通过模型生成 JS 脚本实现数十到数百个子代理扇出；OpenAI Codex 采用 manager-worker 模式实现并发线程；学术方案（SPOQ）证明 DAG 拓扑排序可达 14.3 倍理论加速。但硬件受限时（2 GPU 槽位），加速回落至约 1.4 倍——并发的收益受物理约束封顶。
+</KeyFinding>
+
+---
+
+## 一、编排模型对比
+
+### 核心架构分野
+
+当前 AI coding agent 的编排模型可以沿一个光谱分布：
+
+<ComparisonMatrix
+  headers={["工具", "编排范式", "控制流位置", "并发模式", "信息可验证度"]}
+  rows={[
+    { "工具": "[Claude Code](https://claude.ai/code)", "编排范式": "混合（ReAct + 确定性脚本）", "控制流位置": "JS 沙箱（脱离上下文窗口）", "并发模式": "模型生成脚本扇出子代理", "信息可验证度": "高" },
+    { "工具": "[OpenAI Codex CLI](https://github.com/openai/codex)", "编排范式": "迭代式代理循环 + 多代理", "控制流位置": "代理循环内（上下文窗口中）", "并发模式": "Manager-Worker 派发", "信息可验证度": "中" },
+    { "工具": "[Cursor](https://cursor.com)", "编排范式": "不透明（Background Agent）", "控制流位置": "未知", "并发模式": "未知", "信息可验证度": "低" },
+    { "工具": "[Windsurf](https://windsurf.com)", "编排范式": "不透明（Cascades/Flows）", "控制流位置": "未知", "并发模式": "未知", "信息可验证度": "低" },
+    { "工具": "[Devin](https://devin.ai)", "编排范式": "全自主代理", "控制流位置": "未知", "并发模式": "未知", "信息可验证度": "低" },
+  ]}
+/>
+
+### Claude Code：混合编排的典型实现
+
+<VerdictCard
+  claim="Claude Code 底层是 ReAct 模式 while 循环（1.6% AI 决策逻辑 + 98.4% 确定性基础设施），上层通过 Dynamic Workflows 让模型生成 JavaScript 编排脚本，将控制流从上下文窗口迁移到确定性代码中执行"
+  verdict="confirmed"
+  votes="5 条合并声明，均为 3-0 通过"
+/>
+
+Claude Code 的架构揭示了一个反直觉的事实：**一个 AI coding agent 中真正由 AI 驱动的部分极其精简**。VILA-Lab 的源码逆向分析（基于 2026 年 3 月泄露的 v2.1.88）确认，核心代码中仅 1.6% 是 AI 决策逻辑，其余 98.4% 是确定性的基础设施——工具路由、权限检查、上下文管理、错误恢复等。
+
+2026 年 5 月 28 日发布的 Dynamic Workflows（v2.1.154）将这一分离推到了极致：
+
+1. **模型生成编排脚本** — LLM 根据任务需求编写一段 JavaScript，定义循环、分支、屏障（barrier）等控制流
+2. **隔离沙箱执行** — 脚本在独立运行时环境中执行，不占用对话上下文窗口
+3. **子代理并行扇出** — 脚本通过 `agent()`/`parallel()`/`pipeline()` 原语派发数十到数百个子代理
+4. **中间状态存于脚本变量** — 不回流到 LLM 上下文，只有最终结果返回
+
+这是「模型生成、确定性执行」的混合范式：LLM 负责理解任务和设计编排策略（推理关注点），执行引擎负责可靠地运行这个策略（编排关注点）。
+
+### OpenAI Codex CLI：迭代循环 + 多代理
+
+<VerdictCard
+  claim="Codex CLI 采用迭代式代理循环，支持 manager-worker 多代理编排模式，管理者分解任务并派发给并行 worker，每个 worker 拥有独立上下文窗口"
+  verdict="confirmed"
+  votes="2 条合并声明，3-0 和 2-1"
+/>
+
+Codex 的架构相对传统但有效：
+
+- **核心是单代理循环**：每轮 Turn 由「推理 + 工具调用」组成，循环直到任务完成
+- **多代理为附加能力**：通过 `spawn_agent`/`wait_agent` 工具实现 manager-worker 派发
+- **增量上下文传递**：使用 `previous_response_id` 而非重放完整历史，配合 auto-compaction 机制
+
+与 Claude Code 的关键区别：Codex 的编排逻辑仍在代理循环内部（LLM 上下文中），而非迁移到外部确定性运行时。这意味着编排决策本身消耗上下文窗口预算。
+
+### 学术视角：SPOQ 的 DAG 调度
+
+<VerdictCard
+  claim="SPOQ 通过对依赖 DAG 做拓扑排序预计算并行波次，在无界基准上实现 14.3 倍加速，硬件受限时稳定在约 1.4 倍"
+  verdict="confirmed"
+  votes="3 条合并声明，均为 3-0 通过"
+/>
+
+[SPOQ](https://arxiv.org/html/2606.03115v1)（2026 年 6 月 arxiv 预印本）明确将编排与执行视为可分离关注点：
+
+- 对标 [ChatDev](https://github.com/OpenBMB/ChatDev) 的顺序角色扮演和 [MetaGPT](https://github.com/geekan/MetaGPT) 的消息传递
+- 提出确定性 DAG 调度 + LLM 任务执行的分离架构
+- 临界路径比 1.03-1.11（近理论最优）
+- **Human-as-an-Agent 模型**：将人类审查建模为 DAG 中的一个节点，残余缺陷从 0.47 降至 0.03/任务
+
+<Callout type="warning" title="数据局限">
+  SPOQ 的 14.3 倍加速来自合成 sleep 基准（DAG-20-D1 配置），非真实代码库任务。硬件受限场景（2 GPU 槽位）实际加速仅约 1.4 倍。论文尚未经同行评审。
+</Callout>
+
+---
+
+## 二、并发与上下文管理
+
+### 并发能力对比
+
+<ScoreCard
+  title="并发编排能力评分"
+  scores={[
+    { label: "Claude Code（Dynamic Workflows）", value: 9, max: 10 },
+    { label: "OpenAI Codex CLI（Multi-Agent）", value: 6, max: 10 },
+    { label: "SPOQ（DAG 调度，学术）", value: 8, max: 10 },
+    { label: "Cursor / Windsurf / Devin", value: -1, max: 10 }
+  ]}
+/>
+
+{/* 注：-1 表示数据不足无法评分 */}
+
+### 上下文管理策略
+
+<VerdictCard
+  claim="Claude Code 通过双路径工具执行（StreamingToolExecutor + runTools）实现并发，配合 5 层渐进式上下文压缩管线和纯文件式记忆系统管理状态"
+  verdict="partial"
+  votes="2 条合并声明，2-1 和 3-0"
+/>
+
+Claude Code 的上下文管理是一个 5 层渐进式压缩管线（按成本递增触发）：
+
+1. **Budget Reduction** — 裁剪低价值 token（工具输出摘要等）
+2. **Snip** — 移除中间对话轮次的详细内容
+3. **Microcompact** — 超短摘要替换旧消息
+4. **Context Collapse** — 折叠整段对话为关键结论
+5. **Auto-Compact** — 最后手段，全面重写上下文
+
+记忆系统完全基于文件（CLAUDE.md），无向量数据库，可版本控制和人工审查。这是一个有意的设计选择：**显式优于隐式，可审计优于魔法**。
+
+<Callout type="insight" title="洞察">
+  Dynamic Workflows 的核心价值不仅是并发，更是**上下文压力的根本性缓解**——中间结果存在 JavaScript 变量中而非对话上下文中，从 O(n × output_size) 降为 O(final_result)。这解释了为何它能处理单上下文窗口根本无法容纳的任务。
+</Callout>
+
+---
+
+## 三、上下文漂移：共同的敌人
+
+<VerdictCard
+  claim="上下文漂移是所有 AI coding agent 的核心瓶颈：EvoClaw 基准测试显示代理在孤立任务上表现超过 80%，但在连续演化设定中骤降至最多 38%"
+  verdict="confirmed"
+  votes="3-0"
+/>
+
+[EvoClaw](https://arxiv.org/abs/2603.13428)（2026 年 3 月）测试了 12 个前沿模型和 4 个代理框架，量化了一个核心现象：
+
+> 当代码库在多轮任务间持续演化，代理对系统级不变量的理解逐渐崩塌。
+
+这不是简单的「上下文太长」问题——即使窗口足够大，**信息的一致性维护**才是瓶颈。具体表现：
+
+- 孤立任务（给定完整上下文）：各模型表现 80%+
+- 连续演化（需要追踪跨任务的状态变化）：骤降至最多 38%
+- 性能崩塌点与任务序列长度强相关，而非绝对上下文长度
+
+这解释了为何 Claude Code 和 SPOQ 都不约而同地将编排逻辑移出上下文窗口——这不是优化，而是**必要的架构约束**。
+
+---
+
+## 四、人机协作模式
+
+不同编排层设计暗含了不同的人机协作哲学：
+
+<ComparisonMatrix
+  headers={["工具", "自主度级别", "审批机制", "核心哲学"]}
+  rows={[
+    { "工具": "Claude Code", "自主度级别": "可调（plan → auto → bypass）", "审批机制": "权限模式 + hooks", "核心哲学": "人类设定边界，AI 在边界内自主" },
+    { "工具": "Codex CLI", "自主度级别": "中（suggest/auto-edit/full-auto）", "审批机制": "沙箱隔离 + 审批门", "核心哲学": "安全沙箱内放手，边界外收紧" },
+    { "工具": "Cursor", "自主度级别": "高（Background Agent 全自主）", "审批机制": "PR 级别审查", "核心哲学": "后台完成，人类审查结果" },
+    { "工具": "Devin", "自主度级别": "最高（全自主执行）", "审批机制": "任务完成后审查", "核心哲学": "AI 作为独立开发者" },
+  ]}
+/>
+
+SPOQ 的 Human-as-an-Agent 模型提供了一个有趣的理论框架：将人类审查建模为 DAG 中的一个显式节点，而非全局的中断/恢复机制。这意味着人类参与可以被精确调度——只在高风险节点上介入，而非全程监控。
+
+---
+
+## 五、被驳回的流行说法
+
+以下声明在对抗验证中被驳回，值得特别关注——它们代表了当前围绕这些工具的常见误解：
+
+<VerdictCard
+  claim="到 2026 年 6 月，Claude Code、Cursor、Codex 和 Antigravity 已经收敛到同一种代理编码蓝图架构"
+  verdict="rejected"
+  votes="0-3"
+/>
+
+现实是这些工具的编排架构差异极大。Claude Code 走向确定性脚本编排，Codex 保持传统代理循环加多代理扩展，Cursor 和 Windsurf 的内部实现不透明。「收敛」的说法可能来自表面功能相似性（都能写代码、都能用工具），而非架构层面的真正趋同。
+
+<VerdictCard
+  claim="Dynamic Workflows 支持每次运行最多 1,000 个并行子代理"
+  verdict="rejected"
+  votes="0-3"
+/>
+
+多个三方来源声称 1,000 并行子代理，但对抗验证发现这个数字缺乏 Anthropic 官方确认，更可能是并发槽位上限（min(16, cpu cores - 2)）与累计代理数上限的混淆。实际并行度受硬件约束远低于此。
+
+<VerdictCard
+  claim="Claude Code 强调审批密集型工作流，是对比工具中最注重 human-in-the-loop 的"
+  verdict="rejected"
+  votes="0-3"
+/>
+
+Claude Code 的权限模式是一个可调光谱（从 plan mode 到 bypass），而非固定的「审批密集型」。用户可以根据信任度动态调整，这与「最注重 HITL」的定位不符。
+
+---
+
+## 六、适用场景判断
+
+基于经验证的发现，对不同任务类型的编排层选型建议：
+
+<ComparisonMatrix
+  headers={["任务类型", "推荐编排模式", "理由"]}
+  rows={[
+    { "任务类型": "大规模迁移/重构", "推荐编排模式": "确定性脚本（Dynamic Workflows）", "理由": "需要可预测的 fan-out，中间状态不应占用上下文" },
+    { "任务类型": "探索性 bug 修复", "推荐编排模式": "纯 ReAct 循环", "理由": "需要灵活的上下文推理，控制流不可预定义" },
+    { "任务类型": "独立子任务批处理", "推荐编排模式": "Manager-Worker（Codex 模式）", "理由": "子任务间无依赖，各自独立上下文即可" },
+    { "任务类型": "需要人类高频介入", "推荐编排模式": "DAG + HaaA（SPOQ 模式）", "理由": "人类审查作为显式调度节点，避免阻塞并行路径" },
+    { "任务类型": "跨系统集成/长链任务", "推荐编排模式": "混合（根据阶段切换）", "理由": "上下文漂移在此场景最严重，需要显式的状态隔离" },
+  ]}
+/>
+
+---
+
+## 七、开放问题
+
+1. **Cursor 和 Windsurf 的黑箱**：Background Agent 和 Cascades/Flows 的编排架构细节完全不透明，无法进行可靠的技术对比。这是市场策略还是尚未成熟？
+
+2. **Dynamic Workflows 的生产验证**：仍处于 research preview 阶段（仅 Max/Team/Enterprise 可用），缺乏大型代码库（>100K LOC）上的可靠用户报告。
+
+3. **上下文窗口扩大是否让编排层过时**：当窗口持续扩大（1M+ tokens），上下文漂移问题会自然缓解，还是编排层分离仍然是必要的架构选择？EvoClaw 的数据暗示答案是后者——问题在于信息一致性维护，而非绝对容量。
+
+4. **任务类型 × 编排模式的 ROI**：确定性 DAG、模型生成脚本、纯 ReAct 循环对不同任务类型（重构、bug 修复、绿地开发）的效率差异缺乏定量对比。
+
+---
+
+## 研究局限
+
+<Callout type="warning" title="需要注意的局限">
+  1. Claude Code 源码分析基于 2026 年 3 月泄露的 v2.1.88，Dynamic Workflows 发布于 v2.1.154（5 月 28 日），两者间可能有显著架构变更。
+  2. SPOQ 的加速数据来自合成基准，非真实代码库。
+  3. 覆盖严重偏向 Claude Code（可验证信息最多），不代表其他工具不优秀。
+  4. Dynamic Workflows 仍处于 research preview。
+  5. 所有 arxiv 来源为预印本，未经同行评审。
+</Callout>
+
+---
+
+## 来源
+
+| 来源 | 类型 | 角度 |
+|------|------|------|
+| [VILA-Lab/Dive-into-Claude-Code](https://github.com/VILA-Lab/Dive-into-Claude-Code) | 一手源码分析 | 架构逆向 |
+| [SPOQ: Agentic Workflow via Separation of Concerns](https://arxiv.org/html/2606.03115v1) | 学术论文 | DAG 编排 |
+| [EvoClaw: Evolving Code via LLM Agent Workflow](https://arxiv.org/abs/2603.13428) | 学术论文 | 上下文漂移 |
+| [InfoQ: Dynamic Workflows](https://www.infoq.com/news/2026/06/dynamic-workflows-claude-code/) | 技术媒体 | 产品发布 |
+| [DevOps.com: Dynamic Workflows](https://devops.com/claude-codes-dynamic-workflows-take-on-the-tasks-that-were-too-big-to-automate/) | 技术媒体 | 产品分析 |
+| [Codex 完整架构分析](https://bhavishyapandit9.substack.com/p/everything-about-codex-the-complete) | 博客 | Codex 架构 |
+| [EvoClaw 完整论文](https://arxiv.org/html/2606.05608v1) | 学术论文 | 代理评估 |
