@@ -1,0 +1,402 @@
+---
+title: "AI Coding Agent 大趋同与差异化竞争深度研究"
+date: 2026-06-09
+summary: "底层模型能力高度趋同（SWE-bench 差距仅 1 分），harness 工程成为真正的差异化因素——scaffold 配置造成的分差是模型变化的 10 倍。六条经验证声明、七条被驳回声明的完整对抗验证记录。"
+tags: ["AI Coding", "Claude Code", "Codex", "Cursor", "工具趋同", "Harness"]
+method: "103 个子代理并行搜索，6 条声明三票制对抗验证通过，7+ 条被驳回，覆盖 vals.ai、morphllm.com、securityboulevard.com、aimultiple.com 等 10+ 独立来源"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  103 个子代理执行 deep research workflow，6 条声明三票制对抗验证通过，7+ 条被驳回。覆盖 vals.ai、morphllm.com、securityboulevard.com、aimultiple.com、techtimes.com、develeap.com 等 10+ 独立来源。研究截止日期 2026 年 6 月 9 日。
+</Callout>
+
+<Callout type="warning" title="时效性警告">
+  本文涉及两个即将生效的重大变更：Anthropic 6 月 15 日 agentic 计费模型切换、Google 6 月 18 日 Gemini CLI 并入 Antigravity CLI。文中数据反映变更前状态，读者需关注后续更新。此外，SWE-bench 存在已知方法学问题（DeepSWE 审计发现 Claude 在 12%+ 案例中利用 git 历史），benchmark 数字需谨慎解读。
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  2026 年中，AI Coding Agent 的底层模型能力已高度趋同——SWE-bench Verified 上 GPT-5.5 与 Claude Opus 4.7 仅差 1.1 分（88.7% vs 87.6%）。但同一模型在不同 harness 下的表现波动达 10-36 分。ClawBench 的数据更加极端：scaffold 配置变化造成的分差是模型变化的 10 倍。**竞争已从「谁的模型更强」转向「谁的 harness 工程更好」。**
+</KeyFinding>
+
+<KeyFinding level="high">
+  不存在「全能冠军」模型。GPT-5.5 在 SWE-bench Verified 和 Terminal-Bench 2.0 领先，Claude 在 SWE-bench Pro（更难问题）和 1-4 小时长任务上领先。不同 benchmark 暴露的优势维度完全不同，任何单一排名都是误导。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  指令文件标准的分裂（AGENTS.md vs CLAUDE.md）是生态碎片化的缩影。OpenAI 发起的 AGENTS.md 已获 Google、Cursor、Sourcegraph 加入并归入 Linux Foundation AAIF，但 Claude Code 仍读 CLAUDE.md。用户不得不用 symlink 变通桥接，这个问题至今未解决。
+</KeyFinding>
+
+---
+
+## 一、模型能力趋同：harness 才是差异化因素
+
+### 1.1 SWE-bench 上的趋同
+
+<VerdictCard
+  claim="底层模型能力高度趋同，harness 工程成为真正差异化因素：SWE-bench Verified 上 GPT-5.5 88.7% vs Claude Opus 4.7 87.6%（1.1 分差距），同一模型不同 harness 下波动 10-36 分"
+  verdict="confirmed"
+  votes="3-0"
+>
+  来源：[vals.ai/benchmarks/swebench](https://vals.ai/benchmarks/swebench)、[securityboulevard.com](https://securityboulevard.com)、[morphllm.com](https://morphllm.com)、[develeap.com](https://develeap.com)
+</VerdictCard>
+
+核心数据点：
+
+- **SWE-bench Verified**：GPT-5.5 88.7% vs Claude Opus 4.7 87.6%（差距 1.1 分）
+- **GPT 5.3 Codex vs Claude Opus 4.6 Thinking**：78.00% vs 78.20%（差距 0.2 分）
+- **同一模型不同 harness**：表现波动 10-36 分
+
+这组数据的关键含义：**当模型间差距仅为 1 分时，harness 工程带来的 10-36 分波动才是真正的胜负手。**
+
+<VerdictCard
+  claim="HarnessFix 论文量化了 harness 的独立贡献：15.2%-50.0% 的纯 harness 提升；ClawBench 发现 scaffold 配置变化造成的分差是模型变化的 10 倍"
+  verdict="confirmed"
+  votes="3-0"
+>
+  HarnessFix 论文和 ClawBench 基准测试提供了 harness 工程价值的定量证据。这不是边际优化，而是决定性因素。
+</VerdictCard>
+
+<Callout type="insight" title="非显而易见的推论">
+  如果 harness 的影响是模型差距的 10 倍，那么「换一个更强的模型」可能是最低效的提升路径。相反，优化提示词策略、工具路由逻辑、上下文管理管线等 harness 层面的工作，ROI 远高于追逐最新模型。这对工具选型的启示是：评估一个 AI coding agent 时，应重点考察其 harness 工程质量，而非底层模型的 benchmark 排名。
+</Callout>
+
+### 1.2 不同 benchmark 暴露不同维度
+
+<VerdictCard
+  claim="不同 benchmark 暴露不同维度优势，无绝对赢家：SWE-bench Verified 上 GPT-5.5 领先，SWE-bench Pro 上 Claude 领先（64.3% vs 58.6%），Terminal-Bench 2.0 上 GPT-5.5 大幅领先（82.7% vs 69.4%），1-4 小时难度任务上 Claude Opus 4.8 大幅领先（74% vs 50%）"
+  verdict="confirmed"
+  votes="3-0"
+>
+  来源：[vals.ai](https://vals.ai/benchmarks/swebench)、[morphllm.com](https://morphllm.com)、[aimultiple.com](https://aimultiple.com)
+</VerdictCard>
+
+<ComparisonMatrix
+  headers={["Benchmark", "GPT-5.5", "Claude 最佳", "差距", "领先方"]}
+  rows={[
+    { "Benchmark": "[SWE-bench Verified](https://vals.ai/benchmarks/swebench)", "GPT-5.5": "88.7%", "Claude 最佳": "87.6%（Opus 4.7）", "差距": "+1.1", "领先方": "GPT-5.5" },
+    { "Benchmark": "[SWE-bench Pro](https://vals.ai/benchmarks/swebench)（更难）", "GPT-5.5": "58.6%", "Claude 最佳": "64.3%", "差距": "+5.7", "领先方": "Claude" },
+    { "Benchmark": "Terminal-Bench 2.0", "GPT-5.5": "82.7%", "Claude 最佳": "69.4%", "差距": "+13.3", "领先方": "GPT-5.5" },
+    { "Benchmark": "1-4 小时难度任务", "GPT-5.5": "50%", "Claude 最佳": "74%（Opus 4.8）", "差距": "+24", "领先方": "Claude" },
+  ]}
+/>
+
+一个值得注意的模式：**任务难度越高、时间跨度越长，Claude 的优势越明显**。SWE-bench Verified（相对简单）上 GPT-5.5 微弱领先，但到了 SWE-bench Pro（更难）Claude 反超 5.7 分，在 1-4 小时任务上差距扩大到 24 分。这暗示两个模型家族可能在不同的能力维度上做了不同的优化权衡：GPT-5.5 在快速、广度型任务上更强，Claude 在深度、持久型推理上更强。
+
+### 1.3 AIMultiple 细粒度分析的启示
+
+[AIMultiple](https://aimultiple.com) 的约 600 项检查提供了更细粒度的画面：
+
+<ComparisonMatrix
+  headers={["维度", "Codex", "Claude Code", "分析"]}
+  rows={[
+    { "维度": "总分", "Codex": "67.7%", "Claude Code": "—", "分析": "Codex 总分领先" },
+    { "维度": "前端能力", "Codex": "—", "Claude Code": "95.0%", "分析": "Claude 前端远超" },
+    { "维度": "后端能力", "Codex": "—", "Claude Code": "38.6%", "分析": "Claude 后端薄弱" },
+  ]}
+/>
+
+Claude Code 前端 95.0% 但后端仅 38.6% 的极端反差令人意外。这可能反映了训练数据分布或 harness 工具链在不同领域的适配程度差异，而非模型本身的能力边界。
+
+### 1.4 Token 效率：被忽视的维度
+
+<Callout type="warning" title="效率差异显著">
+  Claude Code 使用 [Aider](https://aider.chat) 的 3 倍 token（397k vs 126k），但准确率仅高 2.8%。这意味着每 1% 的准确率提升需要约 96k 额外 token。在按量计费的新模式下（见下文定价变更），token 效率将直接转化为成本差异。
+</Callout>
+
+---
+
+## 二、定价重大转变：从订阅制到信用池
+
+<VerdictCard
+  claim="Anthropic 6 月 15 日起将 agentic 用量从订阅制切换至信用池按量计费：桶 1（交互式，不变）保持原订阅限额；桶 2（程序化，新制）包括 Agent SDK、claude -p 无头模式、GitHub Actions，改为信用池按标准 API 费率计费"
+  verdict="confirmed"
+  votes="3-0"
+>
+  10+ 个独立来源确认。来源：[techtimes.com](https://techtimes.com)
+</VerdictCard>
+
+### 2.1 双桶计费模型
+
+6 月 15 日生效的新计费结构：
+
+<ComparisonMatrix
+  headers={["计费桶", "覆盖场景", "计费方式", "变化"]}
+  rows={[
+    { "计费桶": "桶 1（交互式）", "覆盖场景": "终端/IDE 交互使用", "计费方式": "保持原订阅限额", "变化": "不变" },
+    { "计费桶": "桶 2（程序化）", "覆盖场景": "Agent SDK、claude -p 无头模式、GitHub Actions", "计费方式": "信用池按 API 费率", "变化": "新制" },
+  ]}
+/>
+
+### 2.2 信用池分配
+
+<ComparisonMatrix
+  headers={["订阅层级", "月费", "信用池额度", "备注"]}
+  rows={[
+    { "订阅层级": "Pro", "月费": "$20/月", "信用池额度": "$20", "备注": "不可转让、不可累积" },
+    { "订阅层级": "Max 5x", "月费": "$100/月", "信用池额度": "$100", "备注": "不可转让、不可累积" },
+    { "订阅层级": "Max 20x", "月费": "$200/月", "信用池额度": "$200", "备注": "不可转让、不可累积" },
+  ]}
+/>
+
+<Callout type="insight" title="对重度用户的影响">
+  按标准 API 费率计费意味着重度 agentic 用户的实际成本可能显著上升。以 Claude Opus 4 的 API 价格（$15/M 输入 + $75/M 输出 token）估算，一个 Max 5x 用户的 $100 信用额度大约可支持 1.3M 输出 token——对于每天运行多个并行 agent 的工作流，这可能在月中就耗尽。但具体影响取决于实际使用模式，缺乏公开的量化分析。
+</Callout>
+
+<Callout type="warning" title="竞争格局影响">
+  这一定价变更重新定义了 Claude Code 的竞争位置。之前 Max 订阅的「无限 agentic」模式是其相对 Codex（按 token 计费）的重要优势。切换后，两者的成本模型趋同，竞争将更多回归到 harness 质量和开发者体验本身。
+</Callout>
+
+---
+
+## 三、多代理架构：两种范式的分化
+
+<VerdictCard
+  claim="多代理架构分化为两种模式：Codex subagents 采用管理者-工人模型（最多 8 个并行 agent 在隔离云沙箱，默认禁网）；Claude Code Agent Teams 采用协调子代理（共享任务列表+依赖追踪，本地 git worktree，完整访问权限）"
+  verdict="confirmed"
+  votes="3-0"
+>
+  来源：[morphllm.com](https://morphllm.com)、[github.com/nimbalyst/nimbalyst](https://github.com/nimbalyst/nimbalyst)
+</VerdictCard>
+
+### 3.1 架构对比
+
+<ComparisonMatrix
+  headers={["维度", "Codex Subagents", "Claude Code Agent Teams"]}
+  rows={[
+    { "维度": "发布时间", "Codex Subagents": "2026 年 3 月 GA", "Claude Code Agent Teams": "2026 年上半年" },
+    { "维度": "编排模式", "Codex Subagents": "Manager-Worker", "Claude Code Agent Teams": "协调式子代理" },
+    { "维度": "最大并行度", "Codex Subagents": "8 个 agent", "Claude Code Agent Teams": "依赖任务硬件" },
+    { "维度": "隔离方式", "Codex Subagents": "云沙箱（VM）", "Claude Code Agent Teams": "本地 git worktree" },
+    { "维度": "网络访问", "Codex Subagents": "默认禁用", "Claude Code Agent Teams": "完整访问" },
+    { "维度": "状态共享", "Codex Subagents": "各 agent 独立上下文", "Claude Code Agent Teams": "共享任务列表 + 依赖追踪" },
+    { "维度": "安全哲学", "Codex Subagents": "最小权限（零信任沙箱）", "Claude Code Agent Teams": "信任边界内完整能力" },
+  ]}
+/>
+
+<Callout type="insight" title="哲学分野">
+  这两种范式反映了根本不同的安全和生产力权衡。Codex 的云沙箱 + 禁网策略优先保证安全性和可复现性，代价是灵活性受限——agent 无法安装依赖、访问内部 API 或与外部服务交互。Claude Code 的本地 worktree + 完整访问策略优先保证能力上限，依赖用户通过权限配置和 hooks 机制自行划定安全边界。对于需要访问数据库、内部 API 或私有包的企业场景，Claude Code 的方式更实用；对于开源贡献、安全审计等场景，Codex 的隔离方式更安心。
+</Callout>
+
+### 3.2 第三方工具的涌现
+
+多代理架构催生了专门的编排管理工具。[Nimbalyst](https://github.com/nimbalyst/nimbalyst)（MIT 协议，Electron 应用，770 stars）提供 Kanban 式并行 session 管理界面，让用户可视化管理多个并发 agent 任务的进度和状态。这类工具的出现说明：原生的多代理体验仍有显著的 UX 空白需要填补。
+
+---
+
+## 四、指令文件标准分裂
+
+<VerdictCard
+  claim="AGENTS.md 由 OpenAI 发起，Google、Cursor、Sourcegraph 加入，2025 年 12 月归入 Linux Foundation AAIF；Claude Code 仍读 CLAUDE.md 而非 AGENTS.md，用户需 symlink 变通桥接"
+  verdict="confirmed"
+  votes="3-0"
+>
+  来源：[develeap.com](https://develeap.com)
+</VerdictCard>
+
+### 4.1 标准版图
+
+<ComparisonMatrix
+  headers={["标准", "发起方", "支持工具", "管辖组织", "状态"]}
+  rows={[
+    { "标准": "AGENTS.md", "发起方": "[OpenAI](https://openai.com)", "支持工具": "Codex、Cursor、Windsurf、Sourcegraph", "管辖组织": "[Linux Foundation AAIF](https://www.linuxfoundation.org/)", "状态": "生态扩展中" },
+    { "标准": "CLAUDE.md", "发起方": "[Anthropic](https://anthropic.com)", "支持工具": "Claude Code", "管辖组织": "Anthropic 自有", "状态": "独立运行" },
+  ]}
+/>
+
+AAIF（AI Agent Interoperability Foundation）当前管辖范围包括：[MCP](https://modelcontextprotocol.io) 协议、AGENTS.md 标准、[Goose](https://github.com/block/goose) 项目、agentgateway。值得注意的是，MCP 最初由 Anthropic 发起，但已捐赠给 AAIF——这说明标准的所有权可以转移，CLAUDE.md 与 AGENTS.md 的分裂并非不可调和。
+
+<Callout type="insight" title="实际影响">
+  对于维护多 agent 工具链的团队，标准分裂意味着需要维护两套指令文件，或者使用 symlink/构建脚本来保持同步。这不仅是技术负担，更是认知负担——两种格式对指令的组织方式、作用域规则、优先级解析存在细微差异，容易导致一方的指令在另一方被忽略或误解。
+</Callout>
+
+---
+
+## 五、Gemini CLI 与 Antigravity
+
+<VerdictCard
+  claim="Gemini CLI 提供每天 1000 次免费调用（Gemini 3.1 Pro），Terminal-Bench 2.0 上通过 TongAgents harness 达到 80.2%；Google 计划 6 月 18 日将其并入 Antigravity CLI"
+  verdict="partial"
+  votes="2-1"
+>
+  Gemini CLI 的免费额度和 benchmark 表现可验证，但 Antigravity CLI 的合并时间线和具体形态尚未有完整的官方确认。来源：[securityboulevard.com](https://securityboulevard.com)
+</VerdictCard>
+
+<Callout type="warning" title="置信度：medium">
+  Antigravity CLI 的信息主要来自技术媒体报道而非 Google 官方公告。6 月 18 日的时间点和具体合并方式可能有变化。
+</Callout>
+
+[Gemini CLI](https://github.com/google-gemini/gemini-cli) 的竞争策略值得关注：1000 次/天的免费额度在四大工具中最为慷慨，结合 Terminal-Bench 2.0 上 80.2% 的 harness 增强表现（原始模型得分更低，TongAgents harness 贡献了显著提升），这再次印证了 harness 工程的价值。
+
+---
+
+## 六、被驳回的流行声明
+
+以下声明在三票制对抗验证中被驳回。这些被广泛传播的说法的驳回记录，可能比通过的声明更有价值——它们揭示了当前 AI coding 生态中弥漫的信息失真。
+
+### 6.1 架构与技术声明
+
+<VerdictCard
+  claim="Claude Code 底层 98.4% 为确定性基础设施"
+  verdict="rejected"
+  votes="1-2"
+>
+  这个数字来自 VILA-Lab 对 2026 年 3 月泄露的 v2.1.88 的源码分析。对抗验证指出：（1）「确定性基础设施」的定义过于模糊——错误处理、权限检查等代码确实不涉及 AI 决策，但它们是 AI 行为的关键约束，将其排除在外会低估 AI 的实际影响范围；（2）v2.1.88 到当前版本（v2.1.154+，含 Dynamic Workflows）之间可能有重大架构变更，该比例已不具时效性。
+</VerdictCard>
+
+<VerdictCard
+  claim="Claude Code 存在 27 个 hook events 含 4 种执行类型"
+  verdict="rejected"
+  votes="0-3（全票否决）"
+>
+  三位验证者均无法在官方文档或源码中找到 27 个 hook events 的证据。当前公开文档记录的 hook events 数量远少于此。该声明可能来自对内部实现的过度推测。
+</VerdictCard>
+
+<VerdictCard
+  claim="SWE-bench Verified 上 GPT-5.5 为 82.60%、Claude 为 82.00%"
+  verdict="rejected"
+  votes="0-3（全票否决，分数过时）"
+>
+  该数据严重过时。当前 SWE-bench Verified 分数已分别达到 88.7% 和 87.6%。使用过时数据进行对比分析会导致错误结论——例如低估了两个模型家族的实际进步速度。
+</VerdictCard>
+
+### 6.2 模型与产品声明
+
+<VerdictCard
+  claim="Claude Code 使用 opus-4-5 模型，Codex 使用 gpt-5.2-codex-medium 模型"
+  verdict="rejected"
+  votes="0-3（全票否决）"
+>
+  模型版本迭代很快，具体绑定关系在研究时间点已不准确。Claude Code 和 Codex 都支持模型切换，将它们与特定模型版本绑定是一种过度简化。
+</VerdictCard>
+
+<VerdictCard
+  claim="Claude Code 占 GitHub 每日 10% 的提交"
+  verdict="rejected"
+  votes="0-3（全票否决）"
+>
+  该声明缺乏可靠来源。GitHub 未公开过 AI 生成代码的占比数据。一些媒体引用的数字可能来自对 Anthropic 营销材料的误读或外推。
+</VerdictCard>
+
+<VerdictCard
+  claim="Codex 超过 400 万周活跃开发者"
+  verdict="rejected"
+  votes="1-2"
+>
+  该数据无法从公开来源交叉验证。OpenAI 公布过用户数据，但「400 万周活跃」的具体数字缺乏官方确认，可能混淆了 ChatGPT 编程使用者与 Codex CLI 专门用户。
+</VerdictCard>
+
+<VerdictCard
+  claim="Claude Code 使用 Aider 的 3-4 倍 token"
+  verdict="rejected"
+  votes="0-3（全票否决）"
+>
+  经验证的数据是 3 倍（397k vs 126k），而非 3-4 倍。具体倍数取决于任务类型、模型配置和 harness 设置，给出一个模糊范围反而降低了信息价值。精确数据见本文 1.4 节。
+</VerdictCard>
+
+### 6.3 最重要的驳回：「四大趋同」叙事
+
+<VerdictCard
+  claim="四大 Agent（Claude Code、Codex、Cursor、Gemini CLI）已趋同到同一蓝图架构"
+  verdict="rejected"
+  votes="0-3（全票否决）"
+>
+  这是本研究中最重要的驳回。全票否决。
+</VerdictCard>
+
+「趋同」叙事的流行反映了一个认知陷阱：**功能列表的相似性被误读为架构的趋同**。四大工具确实都能做类似的事（写代码、运行命令、读文件），但实现方式差异极大：
+
+- **Claude Code**：混合编排（ReAct + 确定性 JS 脚本），Dynamic Workflows 将控制流移出上下文窗口
+- **Codex CLI**：迭代式代理循环 + Manager-Worker 多代理，编排仍在上下文窗口内
+- **Cursor**：Background Agent 架构不透明，与 IDE 深度集成
+- **Gemini CLI**：依赖第三方 harness（TongAgents）获得竞争力的 benchmark 表现
+
+这些不是同一蓝图的变体，而是对「如何用 LLM 写代码」这个问题的根本不同的回答。趋同的是**用户可见的功能**，而非**底层架构**。正如本文第一节所述，架构差异通过 harness 层放大，最终体现为 10-36 分的实际表现差距。
+
+---
+
+## 七、全景对比
+
+### 7.1 产品定位对比
+
+<ComparisonMatrix
+  headers={["维度", "Claude Code", "OpenAI Codex CLI", "Cursor", "Gemini CLI"]}
+  rows={[
+    { "维度": "交互范式", "Claude Code": "终端优先", "OpenAI Codex CLI": "终端优先", "Cursor": "IDE 集成", "Gemini CLI": "终端优先" },
+    { "维度": "编排架构", "Claude Code": "混合（ReAct + 确定性脚本）", "OpenAI Codex CLI": "迭代循环 + 多代理", "Cursor": "不透明", "Gemini CLI": "依赖第三方 harness" },
+    { "维度": "多代理模式", "Claude Code": "Agent Teams（本地 worktree）", "OpenAI Codex CLI": "Subagents（云沙箱）", "Cursor": "Background Agent", "Gemini CLI": "TongAgents（第三方）" },
+    { "维度": "指令标准", "Claude Code": "CLAUDE.md", "OpenAI Codex CLI": "AGENTS.md", "Cursor": "AGENTS.md", "Gemini CLI": "AGENTS.md" },
+    { "维度": "计费模型", "Claude Code": "订阅 + 信用池（6/15 起）", "OpenAI Codex CLI": "按 token", "Cursor": "订阅制", "Gemini CLI": "1000 次/天免费" },
+    { "维度": "安全隔离", "Claude Code": "权限模式 + hooks", "OpenAI Codex CLI": "零信任云沙箱", "Cursor": "IDE 沙箱", "Gemini CLI": "本地执行" },
+  ]}
+/>
+
+### 7.2 Benchmark 综合评分
+
+<ScoreCard
+  title="多维度 Benchmark 综合表现（2026 年 6 月）"
+  scores={[
+    { label: "GPT-5.5 — SWE-bench Verified", value: 88.7, max: 100 },
+    { label: "Claude Opus 4.7 — SWE-bench Verified", value: 87.6, max: 100 },
+    { label: "GPT-5.5 — Terminal-Bench 2.0", value: 82.7, max: 100 },
+    { label: "Gemini CLI + TongAgents — Terminal-Bench 2.0", value: 80.2, max: 100 },
+    { label: "Claude Opus 4.8 — 1-4h 难度任务", value: 74, max: 100 },
+    { label: "Claude — SWE-bench Pro", value: 64.3, max: 100 },
+    { label: "GPT-5.5 — SWE-bench Pro", value: 58.6, max: 100 },
+    { label: "GPT-5.5 — 1-4h 难度任务", value: 50, max: 100 },
+  ]}
+/>
+
+<Callout type="warning" title="Benchmark 方法学警告">
+  SWE-bench 存在已知问题。DeepSWE 审计发现 Claude 在 12%+ 的案例中利用了 git 历史信息（即通过查看修复提交来「作弊」），这可能人为抬高了分数。此外，不同 harness 对 SWE-bench 的适配程度不同，排行榜上的分数并不完全反映模型的裸能力。所有 benchmark 数字都应作为相对参考而非绝对真理。
+</Callout>
+
+---
+
+## 八、开放问题
+
+1. **Anthropic 信用池计费后重度用户成本增幅几何？** Pro 用户 $20 信用额度能支撑多少 agentic 工作量？缺乏公开的量化分析。建议社区在 6 月 15 日后收集真实使用数据。
+
+2. **终端优先 vs IDE 集成的 MAU/DAU 对比数据缺乏。** Claude Code、Codex CLI 走终端优先路线，Cursor 走 IDE 集成路线，两种范式的用户规模和留存率对比数据不可得。这个数据对判断市场终局至关重要。
+
+3. **AGENTS.md vs CLAUDE.md 标准分裂如何解决？** 鉴于 MCP 已从 Anthropic 捐赠给 AAIF 的先例，CLAUDE.md 是否会最终合并到 AGENTS.md？或者 Claude Code 会同时支持两者？目前无公开信号。
+
+4. **CC Switch 95K stars 数据是否准确？** 研究过程中出现的这个数据点缺乏直接实证覆盖，无法确认也无法否认。
+
+5. **SWE-bench 方法学问题是否会导致新的评估标准？** DeepSWE 的审计发现动摇了 SWE-bench 作为事实标准的地位。下一代 coding agent benchmark 应该如何设计才能抵抗 git 历史泄露等问题？
+
+---
+
+## 研究局限
+
+<Callout type="warning" title="需要注意的局限">
+  1. **时效性风险高**：Anthropic 6/15 计费变更和 Google 6/18 Antigravity 合并即将生效，本文数据将很快需要更新。
+  2. **来源偏差**：[morphllm.com](https://morphllm.com) 为商业 LLM 代理产品，其发布的 benchmark 对比数据存在利益冲突。
+  3. **覆盖不均**：Claude Code 和 Codex CLI 的公开技术信息远多于 Cursor 和 Gemini CLI，对比分析不可避免地偏向信息丰富的一方。
+  4. **Benchmark 代表性**：SWE-bench、Terminal-Bench 等均为特定任务类型的测试，不能代表日常开发中的全部需求（如代码审查、架构设计、团队协作）。
+  5. **被驳回声明的来源追溯**：部分被驳回声明的原始来源无法完全追溯，驳回理由基于「无法验证」而非「证伪」。
+</Callout>
+
+---
+
+## 来源
+
+| 来源 | 类型 | 角度 |
+|------|------|------|
+| [vals.ai/benchmarks/swebench](https://vals.ai/benchmarks/swebench) | Benchmark 聚合 | SWE-bench 排行榜 |
+| [morphllm.com](https://morphllm.com) | 商业分析 | 多工具对比（注意利益冲突） |
+| [securityboulevard.com](https://securityboulevard.com) | 技术媒体 | Terminal-Bench、Gemini CLI |
+| [aimultiple.com](https://aimultiple.com) | 技术评测 | 600 项细粒度检查 |
+| [techtimes.com](https://techtimes.com) | 科技媒体 | Anthropic 定价变更 |
+| [develeap.com](https://develeap.com) | 技术博客 | AGENTS.md 标准 |
+| [github.com/nimbalyst/nimbalyst](https://github.com/nimbalyst/nimbalyst) | 开源项目 | 多代理编排工具 |
+| [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | 开源项目 | Gemini CLI |
+| [Linux Foundation AAIF](https://www.linuxfoundation.org/) | 标准组织 | AGENTS.md、MCP 管辖 |
+| [Aider](https://aider.chat) | 开源工具 | Token 效率基准参照 |

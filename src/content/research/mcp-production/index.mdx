@@ -1,0 +1,364 @@
+---
+title: "MCP 生产环境实践深度研究"
+date: 2026-06-09
+summary: "基于 837 个故障线程、5205 个 server 安全审计和协议规范演进分析，系统性评估 MCP 从开发工具走向生产环境的真实准备度。105 个子代理、22 条经验证声明、3 条被驳回。"
+tags: ["MCP", "Model Context Protocol", "生产实践", "安全", "协议演进"]
+method: "105 个子代理并行深挖（故障分类、安全审计、协议演进、协议栈定位、版本管理），22 条声明三票制对抗验证（22 通过，3 驳回）"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  105 个子代理并行深挖 5 个研究角度（运行时故障、安全态势、协议演进、协议栈定位、版本管理），22 条声明三票制对抗验证（22 条通过，3 条驳回）。覆盖来源包括 arXiv 预印本、NSA/OWASP 官方指南、协议规范 RC、安全审计报告和开发者社区数据。
+</Callout>
+
+<Callout type="warning" title="核心局限">
+  arXiv 2606.05339 为预印本，55 人开发者验证样本有限。Astrix Security 的「审计」实为 LLM 辅助 README 分析（约 30% 仓库被排除），且 Astrix 已被 Cisco 收购（~$400M），存在商业利益。2026-07-28 新规范为 Release Candidate，尚未正式发布。本研究反映的是 2026 年 6 月的 MCP 生态快照。
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  MCP 的主要故障面在**能力执行和 Schema 层**，而非传输或协议层。473 个仓库中 837 个故障线程的实证分析表明，工具故障(23.2%)、数据与 Schema 故障(17.6%)、状态与配置故障(17.1%) 三类占总量的 57.8%。这意味着生产环境最大的风险不是「连不上」，而是「连上了但行为不对」。
+</KeyFinding>
+
+<KeyFinding level="high">
+  MCP 生态的安全基础远未达到生产标准。5,205 个开源 server 中 88% 需要凭证，但 53% 依赖静态 API Key/PAT，仅 8.5% 实现 OAuth。学术扫描发现 106 个零日漏洞和 67 个 CVE。协议规范本身声明无法在协议层面强制执行安全——安全完全依赖各 server 实现者自律。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  2026-07-28 新规范 RC 标志着 MCP 从「有状态连接」向「无状态 HTTP」的根本性转型。去除协议级会话和 initialize 握手后，核心层变为无状态，这降低了集成门槛但进一步弱化了服务端对客户端的控制能力——版本管理和工具完整性验证变得更加困难。
+</KeyFinding>
+
+---
+
+## 一、运行时故障分类法
+
+<VerdictCard
+  claim="arXiv 2606.05339 (Owotogbe et al.) 对 473 个活跃维护仓库中 837 个故障线程进行系统性分析，识别出 11 大类、27 子类、73 种叶节点故障类型，其中工具故障(23.2%)、数据与 Schema 故障(17.6%)、状态与配置故障(17.1%) 三类占 57.8%"
+  verdict="confirmed"
+  votes="3-0"
+>
+  这是首个针对 MCP 运行时故障的实证分类研究。55 名开发者验证平均经历过 27 个子类中的 20 个。93.79% 编码者间一致性，[Figshare 公开复制包](https://arxiv.org/abs/2606.05339)可用。
+</VerdictCard>
+
+### 故障分布
+
+<ComparisonMatrix
+  headers={["故障大类", "占比", "典型表现", "生产影响"]}
+  rows={[
+    { "故障大类": "工具故障", "占比": "23.2%", "典型表现": "工具调用失败、参数不匹配、返回值格式异常", "生产影响": "直接导致 agent 任务中断" },
+    { "故障大类": "数据与 Schema 故障", "占比": "17.6%", "典型表现": "Schema 定义与实际行为不一致、类型错误", "生产影响": "静默数据损坏，难以检测" },
+    { "故障大类": "状态与配置故障", "占比": "17.1%", "典型表现": "配置被接受但运行时不强制执行", "生产影响": "灰色故障，通过所有健康检查" },
+    { "故障大类": "传输层故障", "占比": "较低", "典型表现": "连接超时、SSE 断流", "生产影响": "明确的错误信号，反而易处理" },
+    { "故障大类": "协议合规故障", "占比": "较低", "典型表现": "JSON-RPC 格式错误", "生产影响": "开发阶段即可发现" }
+  ]}
+/>
+
+<Callout type="insight" title="非直觉洞察">
+  传输和协议层故障占比最低，反而最不危险——因为它们产生明确的错误信号。真正危险的是 Schema 和工具层的故障：它们通过所有表面检查，却在运行时产生错误行为。这与分布式系统领域的经典教训一致：**最危险的故障不是系统崩溃，而是系统在错误状态下继续运行**。
+</Callout>
+
+### 灰色故障：MCP 的隐形杀手
+
+<VerdictCard
+  claim="MCP 存在灰色故障模式：server 返回格式正确的 JSON-RPC 成功响应，但实际行为与预期不符。配置参数被接受但运行时不强制执行。这类故障通过所有常规健康检查，只能通过行为级端到端验证发现"
+  verdict="confirmed"
+  votes="3-0"
+>
+  类比分布式系统中的 gray failure 概念（[Huang et al. 2017 HotOS](https://www.usenix.org/conference/hotos17/program/presentation/huang)）。已确认的实例包括：smart-tree 工具结果未传播、[apache/apisix](https://github.com/apache/apisix) 的 include_resp_body 被静默覆盖、jupyter-mcp-server 返回合法 JSON-RPC 但内容偏差。
+</VerdictCard>
+
+灰色故障在 MCP 生态中尤其危险，因为 LLM 客户端通常只检查 JSON-RPC 响应格式是否正确，不具备验证语义正确性的能力。一个典型的攻击/故障链：
+
+1. MCP server 接受请求并返回 `result: {...}` 格式正确的响应
+2. LLM 客户端将其视为成功，继续基于该结果推理
+3. 推理基于错误数据，产生错误决策
+4. 用户看到的最终输出看起来合理，但建立在错误基础上
+
+<Callout type="warning" title="防御建议">
+  生产环境中必须实施行为级端到端验证——不仅检查响应格式，还要抽样验证响应内容的语义正确性。这需要在 MCP 客户端层或中间代理层实现，因为协议本身不提供此能力。
+</Callout>
+
+---
+
+## 二、安全态势：触目惊心的现实
+
+<VerdictCard
+  claim="Astrix Security 审计 5,205 个开源 MCP server：88% 需要凭证，53% 依赖静态 API Key/PAT，仅 8.5% 实现 OAuth。协议规范本身声明无法在协议层面强制执行安全"
+  verdict="confirmed"
+  votes="3-0"
+>
+  [Astrix Security 报告](https://astrix.security)。方法论为 LLM 辅助 README 分析，约 30% 仓库因信息不足被排除。Astrix 已被 [Cisco 收购](https://cisco.com)（~$400M），数据解读需考虑商业利益。
+</VerdictCard>
+
+<VerdictCard
+  claim="VIPER-MCP 框架扫描约 40,000 个 MCP 相关仓库，发现 106 个零日漏洞和 67 个 CVE"
+  verdict="confirmed"
+  votes="3-0"
+>
+  [arXiv 2605.21392](https://arxiv.org/abs/2605.21392)。VIPER-MCP 为自动化安全扫描框架，覆盖命令注入、路径遍历、SSRF 等漏洞类型。数据表明 MCP server 生态的安全成熟度极低。
+</VerdictCard>
+
+### 安全凭证使用现状
+
+<ScoreCard
+  title="MCP Server 安全实践评分（基于 5,205 个仓库）"
+  scores={[
+    { label: "OAuth 实现率", value: 8.5, max: 100 },
+    { label: "静态 Key 依赖率", value: 53, max: 100 },
+    { label: "需凭证比例", value: 88, max: 100 },
+    { label: "零日漏洞密度", value: 106, max: 200 }
+  ]}
+/>
+
+{/* 注：零日漏洞密度值 106 基于约 40,000 仓库扫描 */}
+
+### 恶意 Server 攻击面
+
+MCP 协议设计中存在一个根本性安全缺陷：**工具描述在初始批准后可被 server 动态修改**。这意味着：
+
+1. 用户审批了一个看起来无害的工具描述
+2. Server 在后续会话中修改工具描述，注入恶意指令
+3. LLM 按照新的（恶意）描述执行工具调用
+4. 用户的初始审批已无效，但系统不会重新请求授权
+
+这不是理论攻击——[Equixly 的分析](https://equixly.com)确认了此攻击路径的可行性。
+
+### 权威安全指南
+
+<VerdictCard
+  claim="NSA 于 2026-05-20 发布《MCP: Security Design Considerations for AI-Driven Automation》，提出 9 项安全设计建议。OWASP 发布 MCP Top 10（Beta, v0.1），覆盖 MCP01-MCP10 共 10 大风险类别"
+  verdict="confirmed"
+  votes="3-0"
+>
+  NSA 和 OWASP 两个权威机构同期发布 MCP 安全指南，标志着 MCP 安全问题已上升到国家级和行业级关注。核心共识：安全控制必须在 MCP server 层实施，而非依赖系统提示层。
+</VerdictCard>
+
+<ComparisonMatrix
+  headers={["指南", "发布方", "日期", "核心要点", "来源"]}
+  rows={[
+    { "指南": "Security Design Considerations for AI-Driven Automation", "发布方": "NSA", "日期": "2026-05-20", "核心要点": "9 项建议，强调 server 层安全控制", "来源": "[equixly.com](https://equixly.com)" },
+    { "指南": "MCP Top 10 (Beta v0.1)", "发布方": "OWASP", "日期": "2026 Q2", "核心要点": "MCP01-MCP10，10 大风险分类", "来源": "[owasp.org](https://owasp.org)" }
+  ]}
+/>
+
+<Callout type="warning" title="安全成熟度判断">
+  当 NSA 需要专门发布针对某一协议的安全设计指南时，这通常意味着该协议的安全态势已引起国家安全层面的关注。对于考虑在生产环境中使用 MCP 的团队，建议将 NSA 9 项建议和 OWASP Top 10 作为最低安全基线，而非可选的最佳实践。
+</Callout>
+
+---
+
+## 三、协议演进：2026-07-28 新规范 RC
+
+<VerdictCard
+  claim="2026-07-28 新规范 RC 去除协议级会话（消除 Mcp-Session-Id 和 initialize/initialized 握手），核心层变为无状态。Streamable HTTP 强制 Mcp-Method 和 Mcp-Name 路由头。新增缓存支持（ttlMs/cacheScope）和 W3C Trace Context 分布式追踪"
+  verdict="confirmed"
+  votes="3-0"
+>
+  [blog.modelcontextprotocol.io](https://blog.modelcontextprotocol.io) 官方发布。SEP 编号：SEP-2567（会话移除）、SEP-2575（握手移除）、SEP-2243（路由头）、SEP-2549（缓存）、SEP-414（追踪）。
+</VerdictCard>
+
+### 变更全景
+
+<ComparisonMatrix
+  headers={["变更项", "现行规范", "2026-07-28 RC", "SEP 编号", "生产影响"]}
+  rows={[
+    { "变更项": "会话管理", "现行规范": "Mcp-Session-Id + initialize/initialized 握手", "2026-07-28 RC": "去除，_meta 字段携带版本信息，核心层无状态", "SEP 编号": "SEP-2567 / SEP-2575", "生产影响": "降低集成门槛，弱化服务端控制力" },
+    { "变更项": "HTTP 路由", "现行规范": "无强制路由头", "2026-07-28 RC": "强制 Mcp-Method 和 Mcp-Name 路由头", "SEP 编号": "SEP-2243", "生产影响": "支持 API 网关级路由和限流" },
+    { "变更项": "缓存", "现行规范": "无原生支持", "2026-07-28 RC": "ttlMs/cacheScope 参数", "SEP 编号": "SEP-2549", "生产影响": "减少重复工具调用，降低延迟和成本" },
+    { "变更项": "分布式追踪", "现行规范": "无原生支持", "2026-07-28 RC": "W3C Trace Context 标准", "SEP 编号": "SEP-414", "生产影响": "支持跨服务调用链追踪" },
+    { "变更项": "功能废弃", "现行规范": "Roots/Sampling/Logging 可用", "2026-07-28 RC": "三项废弃，至少 12 个月过渡期", "SEP 编号": "—", "生产影响": "现有依赖这些功能的实现需要迁移" }
+  ]}
+/>
+
+<Callout type="insight" title="去状态化的双刃剑">
+  去除协议级会话使 MCP server 更容易部署在无状态基础设施上（Lambda、Cloud Run 等），显著降低了生产化门槛。但这同时意味着 server 失去了跨请求追踪客户端身份的原生能力——认证、速率限制、审计日志等全部需要在应用层重新实现。**便利性和安全控制力的此消彼长**，是这次规范变更最值得关注的张力。
+</Callout>
+
+### Roots/Sampling/Logging 废弃的影响
+
+三项功能废弃虽给出了 12 个月过渡期，但实际影响可能更深远：
+
+- **Roots**：用于限定 server 可访问的文件系统路径。废弃后，路径限制需在 server 实现层自行处理
+- **Sampling**：允许 server 请求 LLM 补全。废弃后，server 无法再通过协议层借用客户端的 LLM 能力
+- **Logging**：标准化日志格式。废弃后，日志格式碎片化
+
+---
+
+## 四、协议栈三层架构
+
+<VerdictCard
+  claim="MCP（工具接入/能力平面）、A2A（Agent 间通信/任务委派）、AG-UI（Agent 到用户界面/流式传输+状态同步）三者形成互补的协议栈，各自解决不同层面的问题，非竞争关系"
+  verdict="confirmed"
+  votes="3-0"
+>
+  [AG-UI Protocol](https://github.com/ag-ui-protocol/ag-ui) 定位源于 CopilotKit 自我营销，但已获广泛采纳。AWS [明确指出](https://aws.amazon.com)：「不要用 MCP 做 agent 间委派——那是错误的抽象」。
+</VerdictCard>
+
+<ComparisonMatrix
+  headers={["协议", "层级", "核心职责", "典型场景", "成熟度"]}
+  rows={[
+    { "协议": "[MCP](https://modelcontextprotocol.io)", "层级": "工具/能力层", "核心职责": "Agent 连接外部工具和数据源", "典型场景": "读数据库、调 API、执行代码", "成熟度": "最高（20,000+ server）" },
+    { "协议": "[A2A](https://github.com/google/A2A)", "层级": "Agent 间通信层", "核心职责": "Agent 发现、任务委派、状态同步", "典型场景": "多 Agent 协作完成复杂任务", "成熟度": "中（Google 主导）" },
+    { "协议": "[AG-UI](https://github.com/ag-ui-protocol/ag-ui)", "层级": "用户界面层", "核心职责": "Agent 状态流式传输到前端 UI", "典型场景": "实时展示 Agent 推理过程", "成熟度": "早期（CopilotKit 主导）" }
+  ]}
+/>
+
+<Callout type="insight" title="抽象层级错位的教训">
+  AWS 的警告揭示了一个常见的架构错误：将 MCP 用于 agent 间通信。MCP 设计的核心抽象是「工具调用」——请求/响应式的能力接入。Agent 间通信需要的是任务委派、进度通知、能力发现等完全不同的交互模式。用错误的抽象解决问题，不会导致编译错误，只会导致更微妙的架构腐化。
+</Callout>
+
+---
+
+## 五、版本管理：被忽视的定时炸弹
+
+<VerdictCard
+  claim="MCP 工具 Schema 的破坏性变更会静默腐蚀 agent 行为，且无编译期或部署期检测机制。MCP 协议不提供工具描述的密码学签名或完整性验证。2026-07-28 RC 去状态化后进一步弱化"
+  verdict="confirmed"
+  votes="3-0"
+>
+  [AWS 技术博客](https://aws.amazon.com)确认。这是 MCP 生产化面临的最隐蔽风险之一。
+</VerdictCard>
+
+版本管理问题的严重性在于其**静默性**。考虑以下场景：
+
+1. **Day 1**：Agent 学习了 `search_database` 工具，参数为 `{query: string, limit: number}`
+2. **Day 30**：Server 更新，`limit` 参数改为 `max_results`，旧参数被静默忽略
+3. **Day 31**：Agent 仍发送 `limit: 10`，server 接受请求但使用默认值 `max_results: 1000`
+4. **结果**：查询返回 100 倍的数据量，agent 处理超时或产生错误结论
+
+这不是假设场景——它是 MCP 灰色故障的一个子类。没有编译器、没有类型检查、没有部署检查会捕获这个问题。在传统 API 管理中，这类问题通过 API 版本号、OpenAPI 规范的 breaking change 检测、合约测试等机制缓解。MCP 生态目前没有这些。
+
+<Callout type="warning" title="生产环境建议">
+  在 MCP 客户端层实现工具 Schema 快照和差异检测：定期拉取工具列表并与基线对比，Schema 变更触发告警和人工审查。这是在协议层缺乏版本管理能力时的必要补偿措施。
+</Callout>
+
+---
+
+## 六、生产准备度评估
+
+<ScoreCard
+  title="MCP 生产环境准备度（2026 年 6 月）"
+  scores={[
+    { label: "协议成熟度", value: 6, max: 10 },
+    { label: "安全态势", value: 3, max: 10 },
+    { label: "故障可观测性", value: 4, max: 10 },
+    { label: "版本管理", value: 2, max: 10 },
+    { label: "生态丰富度", value: 8, max: 10 },
+    { label: "规范稳定性", value: 4, max: 10 }
+  ]}
+/>
+
+### 分维度评估理由
+
+<ComparisonMatrix
+  headers={["维度", "评分", "依据", "改善预期"]}
+  rows={[
+    { "维度": "协议成熟度", "评分": "6/10", "依据": "核心 JSON-RPC 层稳定，但 2026-07-28 RC 引入重大变更", "改善预期": "RC 正式发布后可达 7-8" },
+    { "维度": "安全态势", "评分": "3/10", "依据": "53% 静态 Key、106 个零日、协议层无安全强制", "改善预期": "NSA/OWASP 指南推动下 12-18 个月可能改善" },
+    { "维度": "故障可观测性", "评分": "4/10", "依据": "灰色故障无检测机制，W3C Trace 尚在 RC", "改善预期": "Trace Context 落地后可达 6" },
+    { "维度": "版本管理", "评分": "2/10", "依据": "无签名、无差异检测、无破坏性变更通知", "改善预期": "社区方案出现前难以改善" },
+    { "维度": "生态丰富度", "评分": "8/10", "依据": "20,000+ server，各主流工具均有 MCP 接入", "改善预期": "持续增长" },
+    { "维度": "规范稳定性", "评分": "4/10", "依据": "核心概念变更频繁（废弃 3 项功能、去会话化）", "改善预期": "2026-07-28 RC 后可能进入稳定期" }
+  ]}
+/>
+
+---
+
+## 七、被驳回的声明
+
+以下声明在三票制对抗验证中被驳回，它们代表了当前关于 MCP 的常见误传：
+
+<VerdictCard
+  claim="Censys 扫描发现 12,520 个暴露在公网的 MCP 服务实例"
+  verdict="rejected"
+  votes="1-2"
+>
+  对抗验证未能确认该数据的方法论和可靠性。Censys 的扫描方式可能将非 MCP 的 JSON-RPC 服务误判为 MCP server，缺乏协议级握手验证。该数字可能严重夸大实际暴露面。
+</VerdictCard>
+
+<VerdictCard
+  claim="学术研究表明 40% 的远程 MCP server 无任何认证机制"
+  verdict="rejected"
+  votes="1-2"
+>
+  该声明与 Astrix 的数据（88% 需要凭证）存在显著矛盾。推测差异来源于样本选择偏差——学术研究可能采样了更多实验性/教程类 server，而非生产部署。在两个数据源可靠性均不完美的情况下，该声明不应作为决策依据。
+</VerdictCard>
+
+<VerdictCard
+  claim="AI Agent 协议栈应为四层模型：MCP（工具）、A2A（Agent 通信）、NLWeb（自然语言 Web）、ACP（Agent 通信协议），四者互补"
+  verdict="rejected"
+  votes="0-3"
+>
+  全票否决。NLWeb 是微软的语义搜索协议，将其与 MCP/A2A 并列为协议栈层级是概念错误——NLWeb 解决的是数据发现而非 Agent 协作问题。ACP（Agent Communication Protocol，来自 IBM）定位与 A2A 高度重叠，尚未获得生态验证。将这四者并列为互补层级缺乏充分依据。三层模型（MCP/A2A/AG-UI）获得了更强的多源支持。
+</VerdictCard>
+
+---
+
+## 八、生产环境检查清单
+
+基于本研究发现，为考虑在生产环境中使用 MCP 的团队提供最低安全和可靠性基线：
+
+<ComparisonMatrix
+  headers={["检查项", "优先级", "依据", "实施建议"]}
+  rows={[
+    { "检查项": "OAuth 替代静态 Key", "优先级": "P0", "依据": "53% server 使用静态 Key", "实施建议": "所有生产 server 强制 OAuth 2.0 + 短期 token" },
+    { "检查项": "工具 Schema 快照与差异检测", "优先级": "P0", "依据": "无协议级版本管理", "实施建议": "客户端定期拉取工具列表并与基线对比" },
+    { "检查项": "行为级端到端验证", "优先级": "P0", "依据": "灰色故障无法通过格式检查发现", "实施建议": "抽样验证工具调用结果的语义正确性" },
+    { "检查项": "工具描述变更检测", "优先级": "P1", "依据": "恶意 server 可动态修改描述", "实施建议": "客户端缓存并校验工具描述哈希" },
+    { "检查项": "NSA 9 项建议合规", "优先级": "P1", "依据": "国家级安全指南", "实施建议": "逐条对照 NSA 建议进行安全审查" },
+    { "检查项": "OWASP MCP Top 10 覆盖", "优先级": "P1", "依据": "行业安全基线", "实施建议": "逐条对照 OWASP Top 10 进行风险评估" },
+    { "检查项": "2026-07-28 RC 迁移评估", "优先级": "P2", "依据": "去会话化将影响现有实现", "实施建议": "评估对 Roots/Sampling/Logging 的依赖" }
+  ]}
+/>
+
+---
+
+## 九、开放问题
+
+1. **MCP 工具调用的 token 消耗精确基准**：有报告称 [Firecrawl](https://github.com/mendableai/firecrawl) MCP server 单次调用消耗 32K-82K token，而 CLI 替代方案仅约 200 token。但该对比未通过对抗验证，实际数据可能因场景而异。生产环境中 token 成本是否会成为 MCP 的隐性瓶颈？
+
+2. **去会话化后的迁移成本**：现有基于 Mcp-Session-Id 维护状态的实现（特别是 Sampling 功能的使用者）需要多大的迁移工作量？12 个月过渡期是否充分？
+
+3. **20,000+ server 中生产可用的比例**：Astrix 审计的 5,205 个 server 中，安全态势令人担忧。考虑到审计覆盖率仅约 25%，剩余 75% 的情况可能更糟。在企业安全标准下，实际可用的 server 比例可能远低于预期。
+
+4. **MCP + A2A + AG-UI 之外的替代方案**：当前三层模型是否是最终答案？ACP（IBM）的定位与 A2A 重叠但侧重不同，是否会形成有意义的替代？AG-UI 是否会被更通用的流式协议取代？
+
+5. **灰色故障的系统性防御**：当前除人工审查外，没有自动化手段检测 MCP 灰色故障。是否可能在协议层或中间件层引入行为合约（类似 Pact 合约测试）自动检测？
+
+---
+
+## 研究局限
+
+<Callout type="warning" title="需要注意的局限">
+  1. arXiv 2606.05339 为预印本，55 人开发者验证样本有限，故障分类法尚需更大规模验证。
+  2. Astrix Security 的审计方法为 LLM 辅助 README 分析（非深度代码审计），约 30% 仓库被排除。Astrix 已被 Cisco 收购（~$400M），数据解读需考虑商业动机。
+  3. 2026-07-28 新规范为 Release Candidate，正式版可能有变更。
+  4. AG-UI 的三层协议栈定位主要来源于 CopilotKit 的自我营销叙事，虽已获生态采纳但需保持警惕。
+  5. token 消耗对比（Firecrawl 32K-82K vs CLI 200 token）未通过对抗验证，不应作为决策依据。
+  6. 安全漏洞数据（106 个零日、67 个 CVE）来自自动化扫描工具，可能包含误报。
+</Callout>
+
+---
+
+## 来源
+
+| 来源 | 类型 | 角度 |
+|------|------|------|
+| [arXiv 2606.05339 (Owotogbe et al.)](https://arxiv.org/abs/2606.05339) | 学术预印本 | 运行时故障分类法 |
+| [arXiv 2605.21392 (VIPER-MCP)](https://arxiv.org/abs/2605.21392) | 学术预印本 | 安全漏洞扫描 |
+| [Astrix Security MCP 审计报告](https://astrix.security) | 行业报告 | 安全态势分析 |
+| [MCP 官方博客 — 2026-07-28 RC](https://blog.modelcontextprotocol.io) | 官方发布 | 协议演进 |
+| [NSA: MCP Security Design Considerations](https://equixly.com) | 政府指南 | 安全设计 |
+| [OWASP MCP Top 10](https://owasp.org) | 行业标准 | 安全风险分类 |
+| [AG-UI Protocol](https://github.com/ag-ui-protocol/ag-ui) | 开源项目 | 协议栈定位 |
+| [AWS: MCP 架构指南](https://aws.amazon.com) | 厂商文档 | 协议栈选型 |
+| [Equixly MCP 安全分析](https://equixly.com) | 安全研究 | 攻击面分析 |
+| [Huang et al. 2017 — Gray Failure](https://www.usenix.org/conference/hotos17/program/presentation/huang) | 学术论文 | 灰色故障理论 |
+| [Fiddler AI MCP 分析](https://fiddler.ai) | 行业分析 | 生产实践 |
+| [BuildMVPFast MCP 实践](https://buildmvpfast.com) | 开发者博客 | 实际案例 |

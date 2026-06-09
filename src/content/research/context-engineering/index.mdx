@@ -1,0 +1,371 @@
+---
+title: "Context Engineering（上下文工程）深度研究"
+date: 2026-06-09
+summary: "从 Prompt Engineering 到 Context Engineering：梳理多源定义共识、四套竞争性架构框架、关键量化证据（EvoClaw/ACE/CHARM），以及上下文失败模式的学术-产业双重验证。102 个子代理，7 条经验证声明，5 条被驳回。"
+tags: ["Context Engineering", "上下文工程", "Prompt Engineering", "Agent", "上下文管理"]
+method: "多角度并行搜索、多源抓取、三票制对抗验证（7 条通过，5 条驳回），102 个子代理"
+confidence: "medium"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+
+<Callout type="note" title="研究方法">
+  多角度并行深挖（定义溯源、架构框架、量化证据、失败模式、学科成熟度），多源抓取后对 12 条核心声明进行三票制对抗验证（7 条通过，5 条驳回）。102 个子代理，完整研究流程。
+</Callout>
+
+<Callout type="warning" title="时效性警告">
+  核心来源大部分发布于 2026 年 6 月第一周，距今不到一周，多为预印本（arXiv）或行业报告。领域处于快速演化期，结论半衰期可能极短。本文标注的置信度和验证状态反映的是截至 2026 年 6 月 9 日的证据状态。
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  Context Engineering 不是 Prompt Engineering 的简单升级，而是从**无状态的单次输入优化**转向**有状态的系统级信息流管理**。多个独立来源在这一点上高度一致：IBM 明确写出"Where prompt engineering is stateless, context engineering is stateful"。这个分野是理解整个领域的基石。
+</KeyFinding>
+
+<KeyFinding level="high">
+  上下文管理失败已有关键量化证据：EvoClaw 基准显示 agent 在孤立任务上 >80%，连续演化场景骤降至最高 38%（ICML 2026 接收）；ACE 框架通过演化上下文（而非更新权重）在 agent 基准上提升 10.6%（ICLR 2026）。**上下文质量是当前 agent 能力的真正瓶颈**，不是模型能力本身。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  至少四套独立架构框架在竞争定义 Context Engineering 的"正确做法"——IBM 8 阶段管道、IBM 7 层组合模型、bonigarcia 6 主题块、AI Engineer 4 层堆栈。多套框架并存本身就是信号：**领域尚未收敛到统一标准，当前所有框架都是候选方案而非定论**。
+</KeyFinding>
+
+---
+
+## 一、定义溯源：什么是 Context Engineering？
+
+### 多源独立定义
+
+<VerdictCard
+  claim="Context Engineering 有多个独立来源给出定义，核心共识为：这是一种有状态的系统工程实践，关注 AI agent 全生命周期的上下文信息流设计、管理和优化，而非仅仅是 prompt 的一次性措辞优化。"
+  verdict="confirmed"
+  votes="3-0"
+>
+
+三个独立来源的定义对照：
+
+- **IBM**："the systematic practice of designing, managing, and optimizing the flow of contextual information throughout an AI agent's lifecycle"
+- **AI Engineer 报告**："the practice of managing context windows to extract maximum performance and reliability from stateless LLMs"
+- **Manning 书籍**（[bonigarcia/context-engineering](https://github.com/bonigarcia/context-engineering)）："the practice of designing systems that provide an LLM and AI agents with all the necessary information to complete a task effectively"
+
+来源：[developer.ibm.com](https://developer.ibm.com)、[ai.engineer](https://ai.engineer)、[github.com/bonigarcia/context-engineering](https://github.com/bonigarcia/context-engineering)
+
+</VerdictCard>
+
+### Prompt Engineering vs Context Engineering
+
+这两个概念的关系经常被误读。一种常见误解是"Context Engineering 就是高级版的 Prompt Engineering"。实际的分野更根本：
+
+<ComparisonMatrix
+  headers={["维度", "Prompt Engineering", "Context Engineering"]}
+  rows={[
+    { "维度": "状态模型", "Prompt Engineering": "无状态——每次调用独立构造输入", "Context Engineering": "有状态——跨调用管理信息流" },
+    { "维度": "关注粒度", "Prompt Engineering": "单次请求的措辞、格式、示例", "Context Engineering": "系统级的信息收集、存储、检索、注入管线" },
+    { "维度": "核心挑战", "Prompt Engineering": "如何让模型理解意图", "Context Engineering": "如何让正确信息在正确时间出现在上下文中" },
+    { "维度": "工程属性", "Prompt Engineering": "偏向技巧/经验", "Context Engineering": "偏向架构/系统设计" },
+    { "维度": "适用阶段", "Prompt Engineering": "单轮对话、简单 API 调用", "Context Engineering": "多轮 agent、复杂工作流、长期交互" },
+    { "维度": "典型产物", "Prompt Engineering": "prompt template、few-shot 示例", "Context Engineering": "上下文管线、记忆系统、检索策略、预算管理" },
+  ]}
+/>
+
+<Callout type="insight" title="洞察">
+  IBM 原文中的一句话精准概括了二者区别："Where prompt engineering is stateless, context engineering is stateful." 这不是程度差异，而是范式转换——就像从函数式单次计算转向有状态的分布式系统设计。Prompt Engineering 并不会消失，它会成为 Context Engineering 管线中"Assembly/Injection"阶段的子环节。
+</Callout>
+
+---
+
+## 二、四套竞争性架构框架
+
+<VerdictCard
+  claim="至少四套独立架构框架在尝试系统化定义 Context Engineering 的实践方法，它们之间存在显著的结构差异，反映领域尚未收敛。"
+  verdict="confirmed"
+  votes="3-0"
+>
+
+各框架的设计者背景各异（企业研究、出版机构、行业会议、DevOps 社区），独立程度高，不太可能是相互抄袭。
+
+来源：[developer.ibm.com](https://developer.ibm.com)、[github.com/bonigarcia](https://github.com/bonigarcia/context-engineering)、[ai.engineer](https://ai.engineer)
+
+</VerdictCard>
+
+### 框架全景对比
+
+<ComparisonMatrix
+  headers={["框架", "来源", "核心结构", "层数/阶段", "特色"]}
+  rows={[
+    { "框架": "8 阶段管道", "来源": "[IBM](https://developer.ibm.com)", "核心结构": "线性管道", "层数/阶段": "8 阶段", "特色": "端到端数据流视角，含 Monitoring 阶段" },
+    { "框架": "7 层上下文组合模型", "来源": "[IBM](https://developer.ibm.com)", "核心结构": "分层叠加", "层数/阶段": "7 层", "特色": "缓存 TTL 分级，从 Foundation 到 Trigger" },
+    { "框架": "6 主题块", "来源": "[Manning/bonigarcia](https://github.com/bonigarcia/context-engineering)", "核心结构": "主题分区", "层数/阶段": "6 块", "特色": "教学导向，覆盖 RAG/Tools/Memory" },
+    { "框架": "4 层堆栈", "来源": "[AI Engineer](https://ai.engineer)", "核心结构": "垂直堆栈", "层数/阶段": "4 层", "特色": "引入 CDLC 概念和 Fuzzy Compiler 隐喻" },
+  ]}
+/>
+
+### 各框架详解
+
+**IBM 8 阶段管道**：将上下文工程视为一条完整的数据处理管线——Collection（收集）→ Storage（存储）→ Retrieval（检索）→ Transformation（转换）→ Validation（验证）→ Assembly（组装）→ Injection（注入）→ Monitoring（监控）。这是最接近传统数据工程思维的框架，每个阶段有明确的输入输出。
+
+**IBM 7 层上下文组合模型**：从另一个维度切入——不是阶段而是层次。从底向上：Foundation（基础指令）→ Personalization（个性化）→ Continuity（连续性/记忆）→ Knowledge（外部知识）→ Workflow（工作流状态）→ Action（工具调用结果）→ Trigger（当前触发事件）。每层有不同的缓存 TTL——Foundation 层几乎不变，Trigger 层每次请求都刷新。
+
+**bonigarcia 6 主题块**：Instructions / External Knowledge-RAG / Tools / Memory-State / User Prompts / Orchestration。来自 Manning 出版的书籍配套仓库，偏教学性质，但覆盖了实践中最常遇到的六个关注点。
+
+**AI Engineer 4 层堆栈**：Human Steering（人类引导）→ Context Lifecycle-CDLC（上下文生命周期）→ Agent Harness（代理框架）→ Fuzzy Compiler（模糊编译器，即 LLM 本身）。值得注意的是，[Patrick Debois](https://www.youracclaim.com/users/patrickdebois)（DevOps 概念创始人）参与定义了其中的 CDLC（Context Development Lifecycle）概念：Generate → Evaluate → Distribute → Observe，显然借鉴了 DevOps 中 CI/CD 管线的思路。
+
+<Callout type="insight" title="框架竞争的信号意义">
+  四套框架的并存不应被视为"领域混乱"，而是一个正常的学科早期信号——就像微服务架构早期也经历过 SOA、REST、事件驱动等多范式竞争。关键观察：所有框架都包含"检索/知识"和"记忆/状态"两个维度，这可能是最终收敛的共识核心。而差异最大的部分——是线性管道还是分层模型、是否需要显式的 Monitoring/Observe 阶段——恰恰是实践经验尚不足以裁决的地方。
+</Callout>
+
+---
+
+## 三、量化证据：上下文管理为什么重要？
+
+### EvoClaw：连续演化场景的崩塌
+
+<VerdictCard
+  claim="EvoClaw 基准测试量化了上下文管理失败的后果：agent 在孤立任务上表现 >80%，但在连续演化场景中骤降至最高 38%。跨 12 个前沿模型和 4 个 agent 框架均复现。"
+  verdict="confirmed"
+  votes="3-0"
+>
+
+[EvoClaw](https://arxiv.org/abs/2603.13428) 已被 ICML 2026 接收（同行评审通过），是目前该领域最可靠的量化基准之一。
+
+需要注意的术语辨析：原文使用"error propagation/accumulation"描述性能崩塌机制，而"context drift"（上下文漂移）是后续综述论文（[arXiv:2606.05608](https://arxiv.org/abs/2606.05608)）的解读性术语。综述论文将上下文漂移列为四大核心挑战之一（另外三个：错误传播、技术债感知、验证保真度）。
+
+</VerdictCard>
+
+这一发现的重要性在于：它证明了上下文管理失败不是边缘案例，而是 agent 系统的**系统性瓶颈**。80% → 38% 的骤降意味着：对于需要跨多个步骤持续演化代码的真实场景，当前 agent 的实际能力远低于孤立基准测试所暗示的水平。
+
+### ACE：通过上下文演化提升性能
+
+<VerdictCard
+  claim="ACE 框架通过演化上下文（指令、策略、证据）而非更新模型权重，在 agent 基准上提升 +10.6%，在金融领域提升 +8.6%。同时识别了两个关键失败模式：简洁偏差和上下文坍塌。"
+  verdict="confirmed"
+  votes="3-0"
+>
+
+[ACE](https://arxiv.org/abs/2510.04618)（Adaptive Context Engineering）为 ICLR 2026 论文，来自 Stanford/SambaNova 团队。
+
+AppWorld 排行榜上的对比：ACE(DeepSeek-V3.1) 59.4% vs IBM CUGA(GPT-4.1) 60.3%——两种不同的上下文管理方法取得了非常接近的效果，说明上下文工程路线确实可行。
+
+</VerdictCard>
+
+ACE 识别的两个失败模式值得特别关注，因为它们揭示了上下文演化过程中的内在张力：
+
+- **简洁偏差**（Brevity Bias）：模型在迭代优化上下文时倾向于压缩和简化，导致领域特定的细微洞察被丢弃。直觉上"越简洁越好"，但实际上关键的领域知识往往藏在那些"冗余"的细节中。
+- **上下文坍塌**（Context Collapse）：反复重写上下文时，每一轮都会侵蚀一些细节，多轮之后上下文变成了过度泛化的空洞指令。这类似于图片反复压缩后的质量退化。
+
+<ScoreCard
+  title="上下文管理量化证据评分"
+  scores={[
+    { label: "EvoClaw（ICML 2026）", value: 9, max: 10 },
+    { label: "ACE（ICLR 2026）", value: 8, max: 10 },
+    { label: "CHARM（预印本）", value: 7, max: 10 },
+    { label: "RAMPART（预印本）", value: 3, max: 10 }
+  ]}
+/>
+
+{/* 评分依据：论文质量（同行评审状态）× 实验规模 × 可复现性 */}
+
+---
+
+## 四、上下文失败模式：学术与产业的双重验证
+
+<VerdictCard
+  claim="上下文失败模式已获学术和产业双重验证：CHARM 框架对多步 agentic RAG 中的级联幻觉给出了四类分类，Microsoft AI 红队 v2.0 威胁分类新增了'会话上下文污染'类别。"
+  verdict="confirmed"
+  votes="3-0"
+>
+
+来源：[CHARM 论文](https://arxiv.org/pdf/2606.04435)（arXiv:2606.04435）、[Microsoft Security Blog](https://microsoft.com/security/blog)
+
+</VerdictCard>
+
+### CHARM 级联幻觉四类分类
+
+[CHARM](https://arxiv.org/pdf/2606.04435) 框架针对多步 agentic RAG 场景，识别出四种级联幻觉模式：
+
+<ComparisonMatrix
+  headers={["级联类型", "机制", "检测难度", "实证状态"]}
+  rows={[
+    { "级联类型": "检索级联", "机制": "错误检索结果传递到后续步骤，逐步放大", "检测难度": "中", "实证状态": "CHARM 直接验证" },
+    { "级联类型": "推理级联", "机制": "基于错误前提进行逻辑推理，错误被合理化", "检测难度": "高", "实证状态": "CHARM 直接验证" },
+    { "级联类型": "上下文中毒级联", "机制": "对抗性内容注入上下文，影响后续所有输出", "检测难度": "极高", "实证状态": "CHARM + Microsoft 红队验证" },
+    { "级联类型": "置信度膨胀级联", "机制": "模型对错误输出的信心随步骤增加而增长", "检测难度": "高", "实证状态": "CHARM 直接验证" },
+  ]}
+/>
+
+### 检测基线的严重不足
+
+CHARM 的实验结果暴露了一个令人不安的现实——现有检测方法对这些失败模式几乎无能为力：
+
+- **SelfCheckGPT**：24.3%
+- **RAGAS**：41.7%
+- **LLM 自修正**：12.8%
+
+LLM 自修正失败率高达 87.2%，论文给出的原因是**确认偏差**：当输出与已损坏的上下文一致时，模型会将错误输出视为正确——因为它确实"符合上下文"。这是一个深层的结构性问题，不是简单的"让模型多检查一遍"能解决的。
+
+此外，对抗性近似干扰（adversarial perturbation）会将检测率从 91.2% 降至 84.1%，说明即使是相对有效的检测方法也脆弱。
+
+<Callout type="warning" title="安全视角">
+  Microsoft AI 红队 v2.0 威胁分类新增"会话上下文污染"类别，并建议将累积会话上下文视为"安全相关数据结构"（security-relevant data structure）。这意味着上下文不仅是性能问题，还是安全问题——长期运行的 agent 的上下文可能被恶意污染，且现有检测手段严重不足。
+</Callout>
+
+---
+
+## 五、上下文预算管理：初步证据
+
+<VerdictCard
+  claim="上下文预算管理（context budget management）有初步量化证据支持：RAMPART 论文展示了相关性门控将上下文从 4,367 降至 1,405 token（减 67.8%），恢复 83% 成功率。但实验规模极小，证据强度有限。"
+  verdict="partial"
+  votes="2-1"
+>
+
+[RAMPART](https://arxiv.org/html/2606.04628v1) 是一篇关于上下文预算管理的早期工作。关键的 2-1 分歧在于实验规模：仅 n=20 样本、单模型（Qwen3-8B Q4）、单任务类型、单作者未经评审预印本。结论方向可能正确，但定量数据的可推广性存疑。
+
+</VerdictCard>
+
+RAMPART 的两个有趣发现：
+
+1. **相关性门控的效率**：通过判断上下文中每段信息与当前任务的相关性，主动丢弃低相关内容，token 使用量减少 67.8%，同时恢复了大部分任务成功率。这暗示当前 agent 系统中存在大量"上下文垃圾"——被注入但实际上不相关甚至有害的信息。
+
+2. **Schema 驱逐效应**：当工具 schema 存在于上下文中时，调用率 100%；被驱逐后降至 0%。这是一个极端但重要的案例——它说明**上下文窗口中信息的存在与否直接决定模型的行为**，不仅仅是"帮助"或"提示"。
+
+<Callout type="warning" title="证据局限">
+  RAMPART 的定量数据（67.8% 压缩、83% 恢复、3.1x 效率）来自极小规模实验。在被更大规模的研究验证之前，这些数字应被视为"初步信号"而非"可靠结论"。Microsoft 也独立建议"有界会话上下文"（bounded session context），但同样缺乏大规模量化验证。
+</Callout>
+
+---
+
+## 六、学科成熟度评估
+
+<VerdictCard
+  claim="Context Engineering 正在形成独立学科，但处于极早期阶段。正方证据包括 Manning 出版专门书籍、IBM 系统性文章、DevOps 创始人参与定义；反方质疑包括 Forbes Tech Council 称其为'Same Old Complexity in a New Jacket'。"
+  verdict="partial"
+  votes="2-1"
+>
+
+2-1 的分歧点：一位验证者认为现有证据更多是"行业营销推动"而非"自然学科演化"，特别指出 AI Engineer 报告宣称"birthed the discipline"有自我标榜之嫌。
+
+</VerdictCard>
+
+<ComparisonMatrix
+  headers={["证据方向", "来源", "论点", "可信度"]}
+  rows={[
+    { "证据方向": "正方", "来源": "[Manning](https://github.com/bonigarcia/context-engineering)", "论点": "出版专门书籍，完整课程结构", "可信度": "高——出版审查门槛" },
+    { "证据方向": "正方", "来源": "[IBM](https://developer.ibm.com)", "论点": "系统性技术文章，多套框架", "可信度": "高——企业研究信誉" },
+    { "证据方向": "正方", "来源": "[AI Engineer](https://ai.engineer)", "论点": "宣称 birthed the discipline", "可信度": "中——有自我标榜倾向" },
+    { "证据方向": "正方", "来源": "Patrick Debois", "论点": "DevOps 创始人参与定义 CDLC", "可信度": "高——跨领域权威背书" },
+    { "证据方向": "正方", "来源": "O'Reilly / Snowflake", "论点": "采纳该术语和概念框架", "可信度": "中——可能是跟风" },
+    { "证据方向": "反方", "来源": "Forbes Tech Council", "论点": "Same Old Complexity in a New Jacket", "可信度": "中——有效质疑但缺乏深度分析" },
+    { "证据方向": "反方", "来源": "LinkedIn 社区", "论点": "认为是 RAG 重新品牌化", "可信度": "低——非正式讨论" },
+  ]}
+/>
+
+<Callout type="insight" title="关键判断">
+  Context Engineering 的核心主张——从无状态的 prompt 优化转向有状态的系统级上下文管理——有实质性的技术内涵，不是纯粹的术语重命名。EvoClaw 和 ACE 的量化证据支持了这一点：上下文管理确实是一个独立的、可被度量和优化的工程维度。但"独立学科"的成熟还需要更多收敛：统一框架、标准基准、可复现的最佳实践。目前更准确的描述是"正在凝聚的工程子领域"，而非已经成型的学科。
+</Callout>
+
+---
+
+## 七、被驳回的流行说法
+
+以下声明在对抗验证中被全票否决（0-3），值得特别关注——它们代表了当前围绕 Context Engineering 的常见误传：
+
+<VerdictCard
+  claim="LangChain 多代理试点'根因定位时间减少 93%'"
+  verdict="rejected"
+  votes="0-3"
+>
+
+多个二手来源引用了这一数据，但对抗验证无法追溯到任何一手数据源（具体实验设置、样本量、测量方法均缺失）。这类"震撼性数字"在 AI 行业营销中极为常见，不应在严肃分析中引用。
+
+</VerdictCard>
+
+<VerdictCard
+  claim="上下文使用率超过 40% 时性能显著下降"
+  verdict="rejected"
+  votes="0-3"
+>
+
+该声明仅出现在 AI Engineer 报告中，无任何实证数据支持（无实验设置、无模型信息、无基准任务）。"40%"这个数字被广泛传播但没有可验证的源头。真实的拐点很可能因模型架构、任务类型、上下文内容质量而异，不存在一个通用的固定阈值。
+
+</VerdictCard>
+
+<VerdictCard
+  claim="Tobi Lutke 是 Context Engineering 概念的原创提出者"
+  verdict="rejected"
+  votes="0-3"
+>
+
+多篇文章将 Context Engineering 的概念归因于 Shopify CEO Tobi Lutke 的社交媒体发言。但验证发现这些归因来自二手来源，且引用格式存在问题。该概念的系统性阐述来自 IBM、Manning 书籍等多个独立来源，不存在单一的"创始人"。
+
+</VerdictCard>
+
+<VerdictCard
+  claim="RAMPART 首次将 context assembly 作为显式可编程操作"
+  verdict="rejected"
+  votes="0-3"
+>
+
+RAMPART 论文声称"context assembly has not been treated as explicit programmable operation"，但这忽略了 LangChain、LlamaIndex 等框架已有的上下文组装抽象，以及 IBM 8 阶段管道中的 Assembly 阶段定义。该声明的"首次"定位不成立。
+
+</VerdictCard>
+
+<VerdictCard
+  claim="通过 XPIA（Cross-Prompt Injection Attack）实现的 Memory Poisoning 的特定量化声明"
+  verdict="rejected"
+  votes="0-3"
+>
+
+对抗验证无法追溯到关于 XPIA memory poisoning 的具体量化数据的一手来源。Microsoft 红队报告确认了"会话上下文污染"的威胁类别，但未提供被引用的特定攻击成功率数据。
+
+</VerdictCard>
+
+---
+
+## 八、开放问题
+
+以下问题在本次研究中未能获得充分解答，值得后续追踪：
+
+1. **上下文窗口利用率与性能的量化拐点**：Databricks 报道的"32K token 处正确率下降"未通过对抗验证。拐点是否存在？是否因模型架构（注意力机制变体）而异？目前缺乏严格的消融实验。
+
+2. **指令文件格式效果对比**：CLAUDE.md vs .cursorrules vs AGENTS.md——这些不同的上下文注入格式在实际效果上有无量化差异？目前仅有定性比较。
+
+3. **架构框架的收敛路径**：四套框架是否会像微服务架构那样最终收敛到一到两种主流范式？当前无法判断。
+
+4. **上下文漂移的根本解法**：EvoClaw 量化了问题，ACE 提供了演化策略，但根本性的解决方案（如果有的话）尚不清楚。是架构层面的隔离（Dynamic Workflows 思路）？还是算法层面的上下文自修复？
+
+5. **安全边界**：将累积会话上下文视为"安全相关数据结构"后，需要什么级别的访问控制和完整性验证？现有安全框架（OWASP LLM Top 10 等）是否需要更新？
+
+---
+
+## 研究局限
+
+<Callout type="warning" title="需要注意的局限">
+
+1. **时效性风险**：核心来源大部分发布于 2026 年 6 月第一周，多为预印本。EvoClaw 和 ACE 经过同行评审（ICML/ICLR 2026），可靠性更高；CHARM 和 RAMPART 为未评审预印本。
+2. **四种失败模式实证覆盖不均**：上下文中毒最强（CHARM + Microsoft 双重验证）、推理级联有直接实验支撑、检索级联有间接证据、置信度膨胀仅有初步观察。
+3. **缺乏量化对比**：CLAUDE.md vs .cursorrules vs AGENTS.md 等指令文件格式的对比纯粹是定性的。
+4. **RAMPART 数据薄弱**：n=20 样本、单模型、单任务的预印本，定量结论的可推广性存疑。
+5. **行业营销噪声**：AI Engineer 报告等来源有明确的立场倾向（推广 Context Engineering 作为新学科），需要与更中性的学术来源交叉验证。
+
+</Callout>
+
+---
+
+## 来源
+
+| 来源 | 类型 | 关键贡献 |
+|------|------|----------|
+| [IBM: Context Engineering](https://developer.ibm.com) | 企业技术文章 | 8 阶段管道 + 7 层组合模型 + 有状态/无状态分野 |
+| [AI Engineer Report](https://ai.engineer) | 行业报告 | 4 层堆栈 + CDLC 概念 + Fuzzy Compiler 隐喻 |
+| [bonigarcia/context-engineering](https://github.com/bonigarcia/context-engineering) | Manning 书籍仓库 | 6 主题块框架 + 教学结构 |
+| [EvoClaw](https://arxiv.org/abs/2603.13428) | ICML 2026 论文 | 连续演化基准，孤立 >80% → 连续 ≤38% |
+| [EvoClaw 综述](https://arxiv.org/abs/2606.05608) | arXiv 综述 | 四大核心挑战分类 |
+| [ACE Framework](https://arxiv.org/abs/2510.04618) | ICLR 2026 论文 | 上下文演化 +10.6%，简洁偏差/上下文坍塌失败模式 |
+| [CHARM Framework](https://arxiv.org/pdf/2606.04435) | arXiv 预印本 | 级联幻觉四类分类 + 检测基线不足 |
+| [RAMPART](https://arxiv.org/html/2606.04628v1) | arXiv 预印本 | 上下文预算管理初步量化（证据薄弱） |
+| [Microsoft AI Red Team v2.0](https://microsoft.com/security/blog) | 企业安全报告 | 会话上下文污染威胁类别 |
