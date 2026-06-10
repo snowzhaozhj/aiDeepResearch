@@ -1,0 +1,432 @@
+---
+title: "代码图谱全景深度研究"
+date: 2026-06-10
+summary: "从基础表示（AST/CFG/DFG/CPG）到工具链（Tree-sitter/SCIP）、存储方案、核心算法、工业系统，再到 AI + Code Graph 的前沿融合。19 个子代理、4 阶段研究，覆盖 6 个知识维度和 2 个深度子领域。"
+tags: ["代码图谱", "Tree-sitter", "图数据库", "Graph RAG", "GNN", "代码分析"]
+method: "4 阶段工作流（广度扫描 6 维度 + 深度探索 2 子领域 + 综合报告），19 个子代理并行研究"
+confidence: "high"
+---
+import KeyFinding from '@components/KeyFinding.astro';
+import VerdictCard from '@components/VerdictCard.astro';
+import ComparisonMatrix from '@components/ComparisonMatrix.astro';
+import ScoreCard from '@components/ScoreCard.astro';
+import Callout from '@components/Callout.astro';
+import Timeline from '@components/Timeline.astro';
+
+<Callout type="note" title="研究方法">
+  4 阶段工作流：广度扫描（6 个维度并行探索）→ 深度探索（Tree-sitter + 图数据库、AI + Code Graph 两个子领域各 3 个专项代理）→ 综合报告。共 19 个子代理，覆盖学术论文、官方文档、开源项目和技术博客。
+</Callout>
+
+<Callout type="warning" title="核心局限">
+  深度探索阶段 2/6 个代理因 stall 失败（Graph RAG 和 Tree-sitter+图数据库集成），相关内容由综合报告代理基于广度扫描结果补充。部分引用的 star 数和版本号为研究时点（2026.06）快照。动态语言的分析精度受限于静态分析的本质局限。
+</Callout>
+
+## 核心发现
+
+<KeyFinding level="high">
+  代码图谱正经历**从编译器内部数据结构到 AI 编码基础设施的范式转型**。最关键的趋势是代码图谱通过 MCP 协议向 AI Agent 暴露结构化上下文——五类多跳推理查询（影响分析、依赖链追踪、接口实现查找、数据流追踪、架构模式识别）对向量检索结构性不可达，图遍历是不可替代的补充。
+</KeyFinding>
+
+<KeyFinding level="high">
+  **90% 的代码图谱场景不需要专用图数据库。** [CodeGraph](https://github.com/nicobailey/CodeGraph)（44K+ stars）用 SQLite WAL + FTS5 + 递归 CTE 实现完整代码图谱，支持 33 语言。SQLite 递归 CTE 适合 3-5 跳遍历，只有 6+ 跳深度遍历、图算法（PageRank/社区检测）或十万级以上节点的模式匹配才需要 [Neo4j](https://neo4j.com) 或 [Memgraph](https://memgraph.com)。
+</KeyFinding>
+
+<KeyFinding level="medium">
+  **GitHub 先后归档 [Semantic](https://github.com/github/semantic)（Haskell）和 [Stack Graphs](https://github.com/github/stack-graphs)（Rust）**，证明自建完整语义分析框架的维护成本在工业界不可持续。行业最终倾向于组合现有工具（[Tree-sitter](https://tree-sitter.github.io/tree-sitter/) + SCIP indexers）而非从头构建。
+</KeyFinding>
+
+---
+
+## 一、基础表示：从语法到语义的递进链
+
+代码图谱的七种基础表示形成清晰的层次递进链，每一层在前一层之上叠加新的语义维度。
+
+<ComparisonMatrix
+  headers={["表示", "核心内容", "数学基础", "主流实现", "适用场景"]}
+  rows={[
+    { "表示": "AST", "核心内容": "语法结构有序根树", "数学基础": "上下文无关文法推导树的抽象化", "主流实现": "Tree-sitter / Roslyn / Babel", "适用场景": "代码转换、语法高亮、lint" },
+    { "表示": "CFG", "核心内容": "执行路径 + 基本块", "数学基础": "支配树（Lengauer-Tarjan 算法）", "主流实现": "LLVM / Joern", "适用场景": "编译优化、可达性分析" },
+    { "表示": "DFG", "核心内容": "def-use 链 + 数据流分析", "数学基础": "格论不动点计算（Kildall 方法）", "主流实现": "LLVM SSA / Joern", "适用场景": "常量传播、活跃变量分析" },
+    { "表示": "调用图", "核心内容": "过程间调用关系", "数学基础": "CHA→RTA→VTA→指针分析", "主流实现": "Soot / WALA / Joern", "适用场景": "影响分析、内联优化" },
+    { "表示": "PDG", "核心内容": "控制依赖 + 数据依赖统一", "数学基础": "CFG 后支配边界 + DFG", "主流实现": "Joern / CodeQL", "适用场景": "程序切片、信息流分析" },
+    { "表示": "依赖图", "核心内容": "包/模块/函数级依赖", "数学基础": "有向图 + SCC", "主流实现": "各包管理器 / Tree-sitter", "适用场景": "构建系统、循环依赖检测" },
+    { "表示": "CPG", "核心内容": "所有图的统一超图", "数学基础": "节点共享 + 边类型区分", "主流实现": "[Joern](https://joern.io) CPG 规范 1.1", "适用场景": "安全漏洞检测、全面代码分析" }
+  ]}
+/>
+
+### CPG：最终的统一抽象
+
+CPG（Code Property Graph，代码属性图）由 [Yamaguchi 等人于 2014 年提出](https://ieeexplore.ieee.org/document/6956589)，通过让 CFG 节点继承 AST 节点，在同一节点集上叠加 AST 边、CFG 边、CDG 边、REACHING_DEF 边，实现多视图融合。[Joern](https://joern.io) CPG 规范 1.1 定义了 15 个层、40+ 种节点类型，是安全分析和 AI 上下文检索的核心抽象。
+
+### SSA：数据流分析的分水岭
+
+SSA（Static Single Assignment）形式将 def-use 链从多对多简化为一对一，使几乎所有经典优化降级为图遍历。CFG 上的支配边界用于放置 Phi 函数，是现代编译器（LLVM、GCC、V8 TurboFan）的基础。
+
+<Callout type="insight" title="非直觉洞察">
+  **动态语言是所有表示的阿喀琉斯之踵**——eval、动态分派、反射使静态分析精度本质受限。调用图构建算法沿 CHA→RTA→VTA→指针分析的帕累托前沿递进，精度与开销呈对数关系，但动态语言打破了这一前沿。务实的做法是接受 80% 精度的语法级调用图，配合运行时 profiling 或 LLM 语义推断修正。
+</Callout>
+
+---
+
+## 二、解析与构建工具链
+
+工具链存在**「精度-通用性-性能」不可能三角**。
+
+### Tree-sitter：语法层事实标准
+
+[Tree-sitter](https://tree-sitter.github.io/tree-sitter/) 基于 GLR 变体（默认 LR(1) + 冲突时局部切换 GLR），增量解析基于 Tim Wagner 的研究，复杂度 O(变化大小)。当前 v0.26.9，被 Neovim/Zed/Helix/VS Code 1.123 采用。
+
+<ComparisonMatrix
+  headers={["特性", "说明"]}
+  rows={[
+    { "特性": "解析算法", "说明": "按需 GLR：99% 位置 O(n) LR 性能，仅在歧义点分叉" },
+    { "特性": "增量解析", "说明": "ts_tree_edit 调整坐标 → ts_parser_parse_string 共享旧子树，O(变化大小)" },
+    { "特性": "Grammar DSL", "说明": "seq/choice/repeat/optional + 三层优先级（词法/解析/动态）" },
+    { "特性": "容错解析", "说明": "产生 ERROR 和 MISSING 错误节点，继续解析不中断" },
+    { "特性": "外部扫描器", "说明": "处理 Python 缩进、Bash heredoc 等正则无法描述的 token" },
+    { "特性": "查询系统", "说明": "S-expression 语法 + 捕获(@capture) + 谓词(#eq?/#match?/#any-of?)" },
+    { "特性": "语言覆盖", "说明": "官方 24+ Tier 1 语言，社区 150+，Rust/Python/Node.js 绑定" },
+    { "特性": "关键限制", "说明": "只做语法级 CST，无类型推导、无名称解析、无跨文件引用" }
+  ]}
+/>
+
+<Callout type="warning" title="常见集成陷阱">
+  TSInputEdit 必须精确描述编辑范围（字节偏移+行列位置），位置错误会导致解析结果损坏。TSTree 不是线程安全的，多线程场景必须通过 `ts_tree_copy` 复制。谓词由上层绑定实现而非 C 库执行，不同绑定的谓词支持程度可能不同。
+</Callout>
+
+### SCIP：取代 LSIF 的离线索引标准
+
+[SCIP](https://sourcegraph.com/docs/code-intelligence/scip)（Sourcegraph Code Intelligence Protocol）基于 Protobuf + 人类可读字符串 ID，相比 LSIF 体积缩小 4-8 倍、处理速度提升 3 倍。当前覆盖 Java/Scala/Kotlin/TypeScript/Rust/C++/Python 等 13 种语言。
+
+### 工具链对比
+
+<ComparisonMatrix
+  headers={["工具", "定位", "多语言", "增量能力", "精度", "开源"]  }
+  rows={[
+    { "工具": "[Tree-sitter](https://tree-sitter.github.io/tree-sitter/)", "定位": "语法层通用解析", "多语言": "150+", "增量能力": "原生核心能力", "精度": "语法级", "开源": "MIT" },
+    { "工具": "[SCIP](https://sourcegraph.com/docs/code-intelligence/scip)", "定位": "离线语义索引", "多语言": "13", "增量能力": "设计支持", "精度": "语义级", "开源": "Apache 2.0" },
+    { "工具": "LSP", "定位": "实时点查询协议", "多语言": "取决于 server", "增量能力": "实时", "精度": "语义级", "开源": "协议开放" },
+    { "工具": "[CodeQL](https://codeql.github.com/)", "定位": "安全分析（声明式查询）", "多语言": "10", "增量能力": "不支持", "精度": "语义级", "开源": "引擎闭源" },
+    { "工具": "[Joern](https://joern.io)", "定位": "安全分析（CPG 编程式）", "多语言": "6+二进制", "增量能力": "不支持", "精度": "语义级（CPG）", "开源": "Apache 2.0" },
+    { "工具": "[Roslyn](https://github.com/dotnet/roslyn)", "定位": "C#/VB 编译器 API", "多语言": "2", "增量能力": "增量编译", "精度": "编译器级", "开源": "MIT" }
+  ]}
+/>
+
+<Callout type="insight" title="GitHub 代码导航的三代教训">
+  GitHub 代码导航经历三代演进：[Semantic](https://github.com/github/semantic)（Haskell，已归档）→ [Stack Graphs](https://github.com/github/stack-graphs)（Rust，2025.9 归档）→ 整合到 SCIP/LSIF。两代自建方案先后归档证明：**语言选择可以直接杀死一个项目**（Haskell 人才稀缺），自建完整语义框架的维护成本在工业界不可持续。
+</Callout>
+
+---
+
+## 三、存储方案
+
+<ScoreCard
+  title="存储方案适用场景评分（满分 10）"
+  scores={[
+    { label: "SQLite — 开发者工具/MCP 后端", value: 9, max: 10 },
+    { label: "Neo4j — 平台级图分析", value: 7, max: 10 },
+    { label: "Memgraph — 实时图分析", value: 6, max: 10 },
+    { label: "NetworkX — 原型验证", value: 5, max: 10 },
+    { label: "云托管(Neptune/CosmosDB) — 代码图谱", value: 2, max: 10 }
+  ]}
+/>
+
+### 存储方案对比
+
+<ComparisonMatrix
+  headers={["方案", "优势", "劣势", "适用场景", "遍历深度"]}
+  rows={[
+    { "方案": "SQLite + FTS5 + 递归 CTE", "优势": "零部署、单文件、WAL 读写并发", "劣势": "6+ 跳急剧恶化、无图算法", "适用场景": "开发者工具、MCP Server、AI Agent 后端", "遍历深度": "3-5 跳" },
+    { "方案": "[Neo4j](https://neo4j.com)", "优势": "index-free adjacency、Cypher 表达力、GDS 图算法库", "劣势": "需独立服务器、社区版限制严格", "适用场景": "平台级分析、PageRank、社区检测", "遍历深度": "不限" },
+    { "方案": "[Memgraph](https://memgraph.com)", "优势": "全内存、Cypher 兼容、流式处理", "劣势": "内存受限、持久化非核心", "适用场景": "实时图分析、GraphRAG", "遍历深度": "不限" },
+    { "方案": "LadybugDB（Kuzu fork）", "优势": "嵌入式+Cypher 兼容+列式存储", "劣势": "2025.10 分叉，成熟度待验证", "适用场景": "填补 Kuzu 归档后的嵌入式空白", "遍历深度": "不限" },
+    { "方案": "NetworkX / igraph", "优势": "零部署、丰富算法 API", "劣势": "纯 Python 性能差、无持久化", "适用场景": "原型验证、小规模分析（万级节点内）", "遍历深度": "内存限制" }
+  ]}
+/>
+
+### 代码图 Schema 事实标准
+
+Schema 设计已在各开源项目中高度收敛，新项目应直接复用而非重新设计：
+
+**节点类型（8-10 个）：** File（path/language/hash）、Module（name/isExternal）、Class（name/visibility/isAbstract）、Function（name/signature/isAsync）、Method（isStatic/isConstructor）、Variable（type/isConst/scope）、Import（source/specifiers）、Type（kind: interface/enum/type_alias），按需加 Route（API 端点）和 Component（UI 组件）。
+
+**边类型（核心 7 个）：** CONTAINS / CALLS / IMPORTS / EXTENDS / IMPLEMENTS / REFERENCES / DEPENDS_ON。边可携带属性（CALLS 边附加 line 和 isDynamic，IMPORTS 边附加 isDefault 和 alias）。
+
+<Callout type="tip" title="增量更新最佳实践">
+  文件级原子替换（同一事务中删旧建新）+ content hash 校验（避免假阳性）+ unresolved_refs 表诚实记录无法解析的引用。开发时实时增量更新 + CI/CD 全量重建 = 兼顾体验和正确性。版本化存储需求通常被高估——git commit hash 打标签+按需重建比时态图数据库简单得多。
+</Callout>
+
+<Callout type="warning" title="性能杀手：超级节点">
+  Object 基类、utils 模块、index.ts 桶文件等超级节点是所有图数据库的性能杀手。应在 schema 设计层面标记为虚拟聚合节点，查询时限制展开深度。所有参与 MATCH/MERGE 的属性必须建索引，可变长度路径查询务必设上限（`*1..10` 而非 `*1..`）。
+</Callout>
+
+---
+
+## 四、核心算法
+
+### 算法演进路线
+
+代码图分析算法的核心数据结构演进路线是 **CFG → PDG → SDG → CPG**，几乎所有高级分析都可在 CPG 上统一表达为图遍历查询。
+
+<ComparisonMatrix
+  headers={["算法", "时间复杂度", "核心用途", "代码图上的特殊性"]}
+  rows={[
+    { "算法": "Tarjan SCC", "时间复杂度": "O(V+E)", "核心用途": "循环依赖检测、构建顺序、支配树", "代码图上的特殊性": "代码图分析的「瑞士军刀」，一次遍历解决多个问题" },
+    { "算法": "程序切片（前向/后向）", "时间复杂度": "O(V+E)", "核心用途": "影响分析、调试、安全审计", "代码图上的特殊性": "与污点分析高度同构，都是 PDG 上的图可达性问题" },
+    { "算法": "变更影响分析", "时间复杂度": "O(受影响子图)", "核心用途": "变更后找所有受影响路径", "代码图上的特殊性": "代码图谱最直接的工程应用，配合调用图反向边" },
+    { "算法": "Louvain / Leiden 社区检测", "时间复杂度": "≈O(n log n)", "核心用途": "自动识别模块边界、架构恢复", "代码图上的特殊性": "不同边类型应赋不同权重，有分辨率极限" },
+    { "算法": "PageRank / Betweenness", "时间复杂度": "O(V·E)", "核心用途": "识别核心模块、架构瓶颈", "代码图上的特殊性": "在供应链安全中获得新重要性" },
+    { "算法": "子图同构", "时间复杂度": "NP 完全", "核心用途": "模式匹配、代码查询", "代码图上的特殊性": "代码图的有限分支因子使实际搜索空间远小于理论最坏情况" }
+  ]}
+/>
+
+<Callout type="insight" title="非直觉洞察">
+  大多数算法的核心困难不在图算法本身，而在**调用图构建精度**——虚调用、反射、动态分派使调用图存在 over-approximation（误报）和 under-approximation（漏报）的根本权衡。死代码检测看似简单（入度为零的节点），实际面临反射调用、依赖注入、配置驱动路由等动态特性的严重挑战。
+</Callout>
+
+---
+
+## 五、工业实践
+
+### 大厂代码图谱系统
+
+<ComparisonMatrix
+  headers={["系统", "公司", "查询模型", "核心特征"]}
+  rows={[
+    { "系统": "[Kythe](https://kythe.io/)", "公司": "Google", "查询模型": "Hub-and-Spoke 图模式 + 事实存储", "核心特征": "集成复杂度从 O(L×C×B) 降为 O(L+C+B)" },
+    { "系统": "[Glean](https://glean.software/)", "公司": "Meta", "查询模型": "Datalog 风格 Angle 查询语言", "核心特征": "紧凑增量存储，处理数十亿事实的 monorepo" },
+    { "系统": "[Sourcegraph](https://sourcegraph.com/)", "公司": "Sourcegraph", "查询模型": "SCIP + Zoekt trigram + Cody AI", "核心特征": "2025 年转纯企业版 $59/用户/月" },
+    { "系统": "Code Navigation + CodeQL + Copilot", "公司": "GitHub", "查询模型": "Stack Graphs + QL + LLM 三层", "核心特征": "Stack Graphs 已归档，架构演进中" },
+    { "系统": "PSI", "公司": "JetBrains", "查询模型": "语法+语义双模型", "核心特征": "驱动 IDE 全部智能功能" }
+  ]}
+/>
+
+### 安全分析平台
+
+<ComparisonMatrix
+  headers={["工具", "核心方法", "语言覆盖", "关键特征"]}
+  rows={[
+    { "工具": "[CodeQL](https://codeql.github.com/)", "核心方法": "QL 声明式查询", "语言覆盖": "10 种", "关键特征": "变体分析标杆，GitHub Advanced Security 集成" },
+    { "工具": "[Joern](https://joern.io)/ShiftLeft", "核心方法": "CPG 编程式操作", "语言覆盖": "6+二进制", "关键特征": "完全开源，支持 Ghidra 二进制分析" },
+    { "工具": "[Semgrep](https://semgrep.dev/)", "核心方法": "轻量级模式匹配", "语言覆盖": "30+", "关键特征": "社区版仅单文件分析" },
+    { "工具": "[OpenGrep](https://opengrep.dev/)", "核心方法": "社区分叉 Semgrep", "语言覆盖": "30+", "关键特征": "2025 年恢复跨文件污点分析，10+ AppSec 公司联盟" },
+    { "工具": "[Snyk Code](https://snyk.io/)", "核心方法": "AI 辅助", "语言覆盖": "多语言", "关键特征": "autofix 准确率约 80%" },
+    { "工具": "[SonarQube](https://www.sonarsource.com/)", "核心方法": "规则驱动", "语言覆盖": "40+", "关键特征": "7000+ 规则，Quality Gates 治理机制" }
+  ]}
+/>
+
+<Callout type="insight" title="趋势信号">
+  [Mend SAST](https://www.mend.io/) 通过 MCP 协议实现 Agentic SAST 集成 Cursor/Copilot/Claude Code，标志安全分析从**静态扫描向 AI Agent 持续能力**转变。行业共识正在形成：搜索、聊天、编辑和文档是同一底层项目表示的不同视图，持久竞争优势来自仓库模型的质量。
+</Callout>
+
+---
+
+## 六、深度领域：Tree-sitter + 图数据库
+
+### Tree-sitter 深入分析
+
+#### GLR 变体：按需分叉
+
+Tree-sitter 的解析策略是精心设计的工程折中——默认 LR(1) 保持线性性能，仅在 `grammar.js` 的 `conflicts` 声明触发的歧义点局部切换 GLR 分叉。每条分叉路径独立维护解析栈，通过 `prec.dynamic` 累计动态优先级选择最优解析。这种「按需 GLR」策略使其在 99% 的输入位置保持 O(n) 性能。
+
+#### 增量解析机制
+
+基于 Tim Wagner 的研究，分两步执行：
+
+1. **`ts_tree_edit`**：仅调整坐标（字节偏移+行列位置），不做任何重解析
+2. **`ts_parser_parse_string`**：传入编辑后的旧树，解析器内部共享未受影响的子树结构
+
+实现 O(变化大小) 的增量更新——对万行文件的单字符编辑，重解析成本与文件大小无关。
+
+#### Grammar DSL 三层优先级
+
+- **词法优先级**：`prec` 在 `token()` 内，决定选哪个 token
+- **解析优先级**：`prec` 在外部，决定哪条规则解释 token 序列
+- **动态优先级**：`prec.dynamic`，GLR 分叉后的运行时选择
+
+外部扫描器（`externals`）处理正则无法描述的 token（如 Python 缩进、Bash heredoc），需实现 create/destroy/serialize/deserialize/scan 五个函数。
+
+#### 查询系统
+
+S-expression 查询语法支持：字段限定（`field:`）、通配符（`_`）、量词（`+`/`*`/`?`）、备选（`[]`）、锚点（`.`）、否定字段（`!field`）和谓词（`#eq?`/`#match?`/`#any-of?`）。推荐使用查询模式匹配而非 TreeCursor 遍历来提取实体——声明式、易维护且可跨语言复用。
+
+### 端到端集成方案
+
+从代码到可查询图的六步流水线：
+
+1. **解析**：Tree-sitter 解析源文件得到 CST，通过 `_named_` 系列 API 过滤匿名节点
+2. **实体提取**：S-expression 查询提取五类关键模式（函数定义/类定义/导入语句/调用表达式/类型标注）
+3. **关系建立**：调用关系（call_expression）、继承（superclasses）、导入（import 语句）、类型引用
+4. **存储**：按查询深度选择 SQLite 或 Neo4j，先建约束/索引再导入
+5. **增量更新**：文件系统 watcher + content hash + 文件级原子替换
+6. **暴露接口**：通过 MCP Server 向 AI Agent 暴露 search_symbols/get_callers/impact_analysis 等工具
+
+### 三场景最佳选型
+
+<ComparisonMatrix
+  headers={["场景", "推荐方案", "预估周期", "关键理由"]}
+  rows={[
+    { "场景": "开发者工具 / MCP 后端", "推荐方案": "Tree-sitter + SQLite（参考 CodeGraph）", "预估周期": "1-2 周", "关键理由": "零部署、单文件、FTS5 全文搜索、WAL 并发" },
+    { "场景": "平台级多仓库治理", "推荐方案": "Tree-sitter + Neo4j + GDS", "预估周期": "4-6 周", "关键理由": "6+ 跳遍历、PageRank/社区检测、可视化探索" },
+    { "场景": "安全漏洞分析", "推荐方案": "Joern（自带 CPG）或 CodeQL", "预估周期": "直接使用", "关键理由": "完整 CPG、污点分析、程序切片" }
+  ]}
+/>
+
+### Neo4j 关键查询模式
+
+五类关键 Cypher 查询模式覆盖核心代码分析场景：
+
+1. **可变长度路径** `(a)-[:CALLS*1..10]->(b)` — 查找间接调用链
+2. **反向可达性** — 从变更函数出发找所有入口点（影响分析）
+3. **循环路径检测** — 循环依赖检测
+4. **否定模式** `NOT ()-[:CALLS]->()` — 死代码检测
+5. **GDS 图算法** — PageRank / 社区检测做架构分析
+
+<Callout type="tip" title="Neo4j 导入策略（按规模递进）">
+  逐条 CREATE（~1K nodes/s，原型用）→ LOAD CSV + IN TRANSACTIONS（~10K nodes/s，万级节点）→ APOC periodic.iterate（~50K nodes/s，十万级）→ neo4j-admin import（~100K+ nodes/s，百万级离线初始化需停机）。铁律：先建约束和索引再导入数据，先导入节点再导入关系。
+</Callout>
+
+---
+
+## 七、深度领域：AI + Code Graph
+
+### AI Coding 工具的代码理解机制
+
+<ComparisonMatrix
+  headers={["工具", "核心策略", "代码图使用", "关键特征"]}
+  rows={[
+    { "工具": "[Copilot](https://github.com/features/copilot)", "核心策略": "邻近标签页 + FIM + ~6K 字符窗口", "代码图使用": "无显式索引", "关键特征": "无法回答「函数 X 被谁调用」" },
+    { "工具": "[Cursor](https://cursor.com/)", "核心策略": "Merkle 树变更检测 + Tree-sitter AST 分块 + 向量存储", "代码图使用": "语义索引，~5min 重同步", "关键特征": "根据不确定度动态选择 regex/语义/agentic 模式" },
+    { "工具": "[Claude Code](https://claude.ai/code)", "核心策略": "零索引纯工具驱动 ReAct", "代码图使用": "无索引，每次从零探索", "关键特征": "98.4% 代码是确定性基础设施，5 级上下文压缩" },
+    { "工具": "[Aider](https://aider.chat/)", "核心策略": "Tree-sitter 提取 → PageRank → 精简骨架", "代码图使用": "最具原创性的 Repo Map", "关键特征": "1K token 覆盖仓库结构" },
+    { "工具": "[Continue](https://continue.dev/)", "核心策略": "@Codebase 已废弃（2026），转向 MCP", "代码图使用": "项目进入只读状态", "关键特征": "转向推荐 MCP 服务器" },
+    { "工具": "[Cody](https://sourcegraph.com/cody)", "核心策略": "SCIP + trigram + embedding 三路并行", "代码图使用": "最深图谱集成", "关键特征": "transformer reranker 合并结果，转纯企业版" }
+  ]}
+/>
+
+<KeyFinding level="high">
+  代码图谱为 AI Coding 提供四类不可替代价值：**(1)** 减少幻觉——精确的符号定义-引用边消除 chunking 导致的定义丢失；**(2)** 提升补全——调用图提供真实使用模式而非语义相似片段；**(3)** 重构支持——影响分析是杀手级应用；**(4)** 确定性安全门——PreToolUse 钩子 + verify_change，将安全保障从「更聪明的模型」转移到「确定性约束执行」。
+</KeyFinding>
+
+### 向量检索的五类结构性盲区
+
+「[Beyond Vector Similarity](https://arxiv.org/)」（2026）的系统实验确认，以下五类查询无论 embedding 质量如何提升都无法通过向量相似度解决：
+
+1. **影响分析**：修改函数 X 会破坏什么？
+2. **依赖链追踪**：函数 Y 间接依赖哪些接口？
+3. **接口实现查找**：接口 Z 有哪些实现者？
+4. **数据流追踪**：用户输入如何流向 SQL 查询？
+5. **架构模式识别**：哪些模块形成循环依赖？
+
+关键杠杆不是更强的 LLM，而是正确的图遍历算子——配备 9 个类型化遍历原语的 LLM Query Planner 达 F1=0.632，超越手写处理器的 0.472。
+
+<Callout type="insight" title="混合检索已成标配">
+  graph + vector 而非 graph vs vector。纯向量检索有结构性盲区（多跳推理），纯图检索缺乏自然语言语义理解，纯文本搜索无法处理概念查询。三信号融合（词法+语义+图）+ RRF/reranker 是当前收敛方向。[Gortex](https://github.com/gortex-ai/gortex) 用 BM25 + GloVe-50d + 图中心性重排 + RRF 融合，在 71K 节点图上 BM25 R@5=96.8%。
+</Callout>
+
+### Graph RAG 在代码场景的三条路径
+
+<ComparisonMatrix
+  headers={["路径", "代表项目", "核心方法", "效果", "发展速度"]}
+  rows={[
+    { "路径": "(a) 结构化检索", "代表项目": "TICoder（2026）", "核心方法": "调用图双视图相似性检索", "效果": "较 SOTA 平均提升 11.52%", "发展速度": "中" },
+    { "路径": "(b) 知识编码为权重", "代表项目": "Code2LoRA（2026）", "核心方法": "超网络将仓库知识编码为 LoRA 适配器", "效果": "Evo 变体通过 GRU 增量处理 diff", "发展速度": "慢" },
+    { "路径": "(c) 实时工具调用/MCP", "代表项目": "CodeGraph / Gortex", "核心方法": "MCP Server 暴露图查询工具", "效果": "减少 47% token、58% 工具调用", "发展速度": "最快" }
+  ]}
+/>
+
+### GNN 在代码分析中的角色转变
+
+GNN 在代码分析中的角色已从独立模型转变为 **LLM 的结构化感知组件**。
+
+<Timeline events={[
+  { date: "2019", title: "Devign（NeurIPS）", description: "首次将 GGNN 应用于函数级漏洞检测，AST+CFG+DFG+NCS 联合图，87.6% 准确率" },
+  { date: "2021", title: "GraphCodeBERT（ICLR，微软）", description: "选择数据流图而非 AST 融入 Transformer 预训练，图引导掩码注意力机制" },
+  { date: "2021", title: "ReVeal", description: "构建更接近真实分布的数据集（漏洞比例约 1:9），引入可解释性验证" },
+  { date: "2025", title: "GALLa（ACL，蚂蚁+上交）", description: "图编码器+适配器+LLM 级联，即插即用结构增强，不修改 LLM 架构" },
+  { date: "2025", title: "CGM（NeurIPS，蚂蚁 CodeFuse）", description: "SWE-Bench Lite 44% 解决率，基于开源千问模型媲美闭源" },
+  { date: "2025", title: "VulCNN", description: "创新地将代码图转为图像用 CNN 检测，速度快 2-5 倍" },
+  { date: "2026", title: "FusionVul", description: "UniXcoder+GGNN 通过交叉注意力融合，多模态范式成为主流" }
+]} />
+
+**GNN 在 LLM 时代的三种存活形态：**
+1. **结构化检索器**（GraphRAG）——GNN 做子图 embedding，辅助代码检索
+2. **预训练中的结构编码器**（GraphCodeBERT）——将图结构融入预训练过程
+3. **轻量级边缘部署**（VulCNN）——比 LLM 方法快 31.52%，适合资源受限场景
+
+<Callout type="warning" title="数据集质量严重存疑">
+  [PrimeVul](https://arxiv.org/)（ICSE 2025）发现 Big-Vul、CrossVul、CVEFixes、DiverseVul 四个知名漏洞检测数据集中 **20-71% 标签不准确、18.9% 数据泄露**。USENIX Security 2024 揭示模型面对稍有变化的代码可能完全失效。GNN 可能在学习数据集的偏差而非真正的漏洞模式。使用这些基准时必须了解其标签准确率和数据泄露情况。
+</Callout>
+
+---
+
+## 八、学术前沿（2024-2026）
+
+五大方向收敛：
+
+### 1. 多模态融合取代纯 GNN
+
+FusionVul（2026）将 UniXcoder+GGNN 通过交叉注意力融合；Trace Gadgets（ICSE 2025）证明程序切片粒度优于函数级；GALLa（ACL 2025）通过图编码器+适配器+LLM 级联实现即插即用的结构增强；CGM（NeurIPS 2025）在 SWE-Bench Lite 达 44% 解决率。
+
+### 2. 代码图谱作为 LLM 外部知识增强
+
+三条路径并行：TICoder 用调用图检索提升 11.52%；Code2LoRA 将仓库知识编码为 LoRA 适配器；CodeGraph/Gortex 通过 MCP 实时工具调用（发展最快）。
+
+### 3. 「Beyond Vector Similarity」
+
+2026 年的核心发现——五类查询对向量检索结构性不可达。关键杠杆不是更强的 LLM 而是正确的图遍历算子，配备 9 个类型化遍历原语的 LLM Query Planner 达 F1=0.632。
+
+### 4. 增量图维护三层架构
+
+- **解析层**：Tree-sitter 增量解析（亚毫秒级）
+- **图更新层**：fsnotify/FSEvents + 增量图更新（Gortex 约 200ms 延迟）
+- **分析层**：SQLite 索引原生查询（VS Code 搜索 p95 降 77%）
+
+VS Code 1.123 正式集成 Tree-sitter API，标志主流 IDE 对增量语法树的原生支持。
+
+### 5. 形式化验证与 LLM 融合
+
+Goedel-Architect 将证明结构化为依赖图 DAG，实现 MiniF2F-test 99.2% pass@1；Axiom Axel 达传统工具 100 倍验证速度。
+
+<Callout type="insight" title="最薄弱环节">
+  **跨仓库/跨语言代码图**是当前最薄弱的环节——仅 Gortex 提供显式多仓库支持，学术界尚无顶会论文专门研究分布式代码图。仓库级代码图基准稀缺，多数研究停留在函数级/文件级评估。
+</Callout>
+
+---
+
+## 九、可行动的洞察
+
+<KeyFinding level="high">
+  **Tree-sitter + MCP 是为 AI Agent 提供代码结构上下文的当前最优工程路径。** 实测效果：CodeGraph 减少 47% token 使用和 58% 工具调用，Gortex 的符号级读取比整文件读取减少约 80% token。PreToolUse 钩子可将代码图谱变为确定性安全门。
+</KeyFinding>
+
+1. **90% 场景不需要图数据库**——SQLite + Tree-sitter + FTS5 足矣，6+ 跳遍历才需要 Neo4j（置信度：high）
+2. **向量检索存在五类结构性盲区**——影响分析、依赖链追踪等本质需要图遍历，三信号混合检索是收敛方向（置信度：high）
+3. **SCIP 已取代 LSIF**——体积小 4-8 倍、速度快 3 倍，新项目应直接选 SCIP（置信度：high）
+4. **Schema 已收敛**——8-10 节点类型 + 7 边类型，直接复用不需要从头设计（置信度：high）
+5. **GNN 角色转变**——从独立模型变为 LLM 的结构化感知组件，GNN+LLM 混合架构是主流（置信度：high）
+6. **增量更新是分水岭**——文件级原子替换 + 开发实时增量/CI 全量重建（置信度：high）
+7. **自建完整语义框架不可持续**——GitHub 归档两代方案的教训，组合现有工具更务实（置信度：high）
+8. **动态语言接受 80% 精度**——unresolved_refs 表比假造精确结果更有价值（置信度：high）
+9. **漏洞检测数据集质量严重存疑**——20-71% 标签不准确，GNN 实际效果可能被高估（置信度：high）
+10. **代码图谱通过 MCP 协议暴露为 AI Agent 基础设施**——这是发展最快的融合路径（置信度：high）
+
+---
+
+## 十、开放问题
+
+1. **最优粒度**：符号级太细（上下文爆炸），文件级太粗（丢失语义），程序切片级可能是甜蜜点？Trace Gadgets 表明切片粒度优于完整函数图，但计算开销和实时性如何权衡？
+
+2. **跨仓库/跨语言代码图**：当前最薄弱环节。微服务场景中调试时间比模块化单体多 35%（DZone 2024），但静态和动态图的融合方案尚不成熟。
+
+3. **统一标准**：SCIP/Kythe/Glean 缺乏互操作性。MCP 在 Agent 接口层面提供了统一，但底层图模型和查询能力仍然碎片化。
+
+4. **大上下文窗口的影响**：1M+ token 上下文窗口是否削弱代码图谱价值？更可能从必要条件变为效率杠杆——「有图可以做得更好更省」。
+
+5. **嵌入式图数据库空白**：LadybugDB（Kuzu fork）能否接棒？如果失败，开发者工具场景将在 SQLite 表达力限制和 Neo4j 运维开销之间痛苦选择。
+
+6. **全量重建 vs 增量更新的临界点**：随着 LLM token 成本持续下降，精心设计增量更新机制的投入是否还值得？
+
+7. **形式化验证扩展性**：Goedel-Architect 在数学定理证明上取得突破，但从定理证明到通用软件验证的跨越程度尚不清楚。
+
+8. **隐私控制**：CodeGraph/Gortex 将完整代码结构暴露给 AI Agent，企业场景需要细粒度访问控制和信息隔离机制。
